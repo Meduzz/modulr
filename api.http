@@ -1,0 +1,2 @@
+GET /call/service1/hello/world
+Host: localhost:8080
