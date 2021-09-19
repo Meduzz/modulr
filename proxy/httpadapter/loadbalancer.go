@@ -38,7 +38,7 @@ func NewLoadBalancer() LoadBalancer {
 	}
 }
 
-func (p *proxy) Register(service *api.Service) {
+func (p *proxy) Register(service *api.Service) error {
 	lb, exists := p.lbs[service.Name]
 
 	if !exists {
@@ -55,14 +55,14 @@ func (p *proxy) Register(service *api.Service) {
 		RawPath: service.Context,
 	}
 
-	lb.UpsertServer(serviceUrl)
+	return lb.UpsertServer(serviceUrl)
 }
 
-func (p *proxy) Deregister(service *api.Service) {
+func (p *proxy) Deregister(service *api.Service) error {
 	lb, exists := p.lbs[service.Name]
 
 	if !exists {
-		return
+		return nil
 	}
 
 	serviceUrl := &url.URL{
@@ -72,11 +72,17 @@ func (p *proxy) Deregister(service *api.Service) {
 		RawPath: service.Context,
 	}
 
-	lb.RemoveServer(serviceUrl)
+	err := lb.RemoveServer(serviceUrl)
+
+	if err != nil {
+		return err
+	}
 
 	if len(lb.Servers()) == 0 {
 		delete(p.lbs, service.Name)
 	}
+
+	return nil
 }
 
 func (p *proxy) Lookup(name string) http.HandlerFunc {

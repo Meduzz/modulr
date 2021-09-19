@@ -15,12 +15,11 @@ type (
 	}
 )
 
-func NewNatsAdapter() event.EventAdapter {
+func NewNatsAdapter() (event.EventAdapter, error) {
 	conn, err := nuts.Connect()
 
 	if err != nil {
-		// TODO
-		panic(err)
+		return nil, err
 	}
 
 	subs := make(map[string]*nats.Subscription)
@@ -28,36 +27,48 @@ func NewNatsAdapter() event.EventAdapter {
 	return &adapter{
 		conn: conn,
 		subs: subs,
-	}
+	}, nil
 }
 
-func (a *adapter) Publish(topic string, routing string, body []byte) {
-	a.conn.Publish(topic, body)
+func (a *adapter) Publish(topic string, routing string, body []byte) error {
+	return a.conn.Publish(topic, body)
 }
 
-func (a *adapter) Subscribe(topic, routing, group string, handler func([]byte)) {
+func (a *adapter) Subscribe(topic, routing, group string, handler func([]byte)) error {
 	key := fmt.Sprintf("%s.%s.%s", topic, routing, group)
 
 	if group != "" {
-		sub, _ := a.conn.QueueSubscribe(topic, group, func(msg *nats.Msg) {
+		sub, err := a.conn.QueueSubscribe(topic, group, func(msg *nats.Msg) {
 			handler(msg.Data)
 		})
+
+		if err != nil {
+			return err
+		}
 
 		a.subs[key] = sub
 	} else {
-		sub, _ := a.conn.Subscribe(topic, func(msg *nats.Msg) {
+		sub, err := a.conn.Subscribe(topic, func(msg *nats.Msg) {
 			handler(msg.Data)
 		})
 
+		if err != nil {
+			return err
+		}
+
 		a.subs[key] = sub
 	}
+
+	return nil
 }
 
-func (a *adapter) Unsubscribe(topic, routing, group string) {
+func (a *adapter) Unsubscribe(topic, routing, group string) error {
 	key := fmt.Sprintf("%s.%s.%s", topic, routing, group)
 	sub, exists := a.subs[key]
 
 	if exists {
-		sub.Unsubscribe()
+		return sub.Unsubscribe()
 	}
+
+	return nil
 }

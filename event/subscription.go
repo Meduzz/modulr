@@ -7,6 +7,7 @@ import (
 
 	"github.com/Meduzz/helper/http/client"
 	"github.com/Meduzz/modulr/api"
+	"github.com/Meduzz/modulr/errorz"
 	"github.com/Meduzz/modulr/registry"
 )
 
@@ -15,17 +16,17 @@ type (
 	EventRegistry interface {
 		registry.Lifecycle
 		// Publish - api to publish an event
-		Publish(*api.Event)
+		Publish(*api.Event) error
 	}
 
 	// EventAdapter - interface to be implemented by event adapters
 	EventAdapter interface {
 		// Publish - publish a payload to a topic with optional routingkey
-		Publish(string, string, []byte)
+		Publish(string, string, []byte) error
 		// Subscribe - subscribe to a topic with optional routingkey and subscribergroup
-		Subscribe(string, string, string, func([]byte))
+		Subscribe(string, string, string, func([]byte)) error
 		// Unsubscribe - unsubscribe to a topic with optional routingkey and subscribergroup
-		Unsubscribe(string, string, string)
+		Unsubscribe(string, string, string) error
 	}
 
 	subscriptionRegistry struct {
@@ -44,9 +45,13 @@ func NewEventRegistry(adapter EventAdapter) EventRegistry {
 	}
 }
 
-func (s *subscriptionRegistry) Register(service *api.Service) {
+func (s *subscriptionRegistry) Register(service *api.Service) error {
+	combined := errorz.NewError(nil)
+
 	for _, sub := range service.Subscriptions {
-		current := s.upsertSubscription(sub)
+		current, err := s.upsertSubscription(sub)
+
+		combined.Append(err)
 
 		exists := false
 
@@ -68,11 +73,17 @@ func (s *subscriptionRegistry) Register(service *api.Service) {
 			current.Services = append(current.Services, svc)
 		}
 	}
+
+	return combined.Error()
 }
 
-func (s *subscriptionRegistry) Deregister(service *api.Service) {
+func (s *subscriptionRegistry) Deregister(service *api.Service) error {
+	combined := errorz.NewError(nil)
+
 	for _, sub := range service.Subscriptions {
-		current := s.upsertSubscription(sub)
+		current, err := s.upsertSubscription(sub) // TODO might have just created the subscription...
+		combined.Append(err)
+
 		copy := make([]*subscribee, 0)
 
 		for _, active := range current.Services {
@@ -84,16 +95,19 @@ func (s *subscriptionRegistry) Deregister(service *api.Service) {
 		current.Services = copy
 
 		if len(current.Services) == 0 {
-			s.adapter.Unsubscribe(sub.Topic, sub.Routing, sub.Group)
+			err = s.adapter.Unsubscribe(sub.Topic, sub.Routing, sub.Group)
+			combined.Append(err)
 		}
 	}
+
+	return combined.Error()
 }
 
-func (s *subscriptionRegistry) Publish(event *api.Event) {
-	s.adapter.Publish(event.Topic, event.Routing, event.Body)
+func (s *subscriptionRegistry) Publish(event *api.Event) error {
+	return s.adapter.Publish(event.Topic, event.Routing, event.Body)
 }
 
-func (s *subscriptionRegistry) upsertSubscription(sub *api.Subscription) *subscription {
+func (s *subscriptionRegistry) upsertSubscription(sub *api.Subscription) (*subscription, error) {
 	key := fmt.Sprintf("%s.%s.%s", sub.Topic, sub.Routing, sub.Group)
 
 	it, exists := s.subscriptions[key]
@@ -106,12 +120,17 @@ func (s *subscriptionRegistry) upsertSubscription(sub *api.Subscription) *subscr
 			Services: make([]*subscribee, 0),
 		}
 
-		s.adapter.Subscribe(sub.Topic, sub.Routing, sub.Group, s.eventHandler(it))
+		err := s.adapter.Subscribe(sub.Topic, sub.Routing, sub.Group, s.eventHandler(it))
+
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return it
+	return it, nil
 }
 
+// TODO do something smarter with errors
 func (s *subscriptionRegistry) eventHandler(sub *subscription) func([]byte) {
 	index := 0
 	return func(body []byte) {
@@ -138,7 +157,7 @@ func (s *subscriptionRegistry) eventHandler(sub *subscription) func([]byte) {
 		}
 
 		if res.Code() != 200 {
-			log.Printf("Call to %s:%d from %s did not return 200\n", service.Address, service.Path, sub.Topic)
+			log.Printf("Call to %s:%d from %s did not return 200\n", service.Address, service.Port, sub.Topic)
 		}
 	}
 }

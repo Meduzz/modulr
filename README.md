@@ -1,2 +1,2 @@
 # modulr
-library to build proxies. Inspired by dapr.
+library to build dapr inspired proxies (which turns everything into a rest call).

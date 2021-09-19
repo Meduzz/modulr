@@ -2,23 +2,24 @@ package registry
 
 import (
 	"github.com/Meduzz/modulr/api"
+	"github.com/Meduzz/modulr/errorz"
 )
 
 type (
 	// ServiceRegistry - provids main api for the framework.
 	ServiceRegistry interface {
 		// Register - register a service
-		Register(*api.Service)
+		Register(*api.Service) error
 		// Deregister  - remove a service by id
-		Deregister(string)
+		Deregister(string) error
 	}
 
 	// Lifecycle - provides lifecycle methods for child modules.
 	Lifecycle interface {
 		// Register - a new service was added to the registry
-		Register(*api.Service)
+		Register(*api.Service) error
 		// Deregister - a service was removed from the registry
-		Deregister(*api.Service)
+		Deregister(*api.Service) error
 	}
 
 	serviceRegistry struct {
@@ -37,28 +38,38 @@ func NewServiceRegistry(children ...Lifecycle) ServiceRegistry {
 	}
 }
 
-func (s *serviceRegistry) Register(service *api.Service) {
+func (s *serviceRegistry) Register(service *api.Service) error {
 	_, exists := s.services[service.ID]
 
 	if !exists {
 		s.services[service.ID] = service
+		combined := errorz.NewError(nil)
 
 		for _, child := range s.children {
-			child.Register(service)
+			err := child.Register(service)
+			combined.Append(err)
 		}
+
+		return combined.Error()
 	}
+
+	return nil
 }
 
-func (s *serviceRegistry) Deregister(id string) {
+func (s *serviceRegistry) Deregister(id string) error {
 	it, exists := s.services[id]
 
 	if !exists {
-		return
+		return nil
 	}
 
+	combined := errorz.NewError(nil)
 	defer delete(s.services, id)
 
 	for _, child := range s.children {
-		child.Deregister(it)
+		err := child.Deregister(it)
+		combined.Append(err)
 	}
+
+	return combined.Error()
 }

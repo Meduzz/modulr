@@ -13,7 +13,7 @@ func main() {
 	srv := gin.Default()
 
 	loadbalancer := httpadapter.NewLoadBalancer()
-	eventadapter := natsadapter.NewNatsAdapter()
+	eventadapter, _ := natsadapter.NewNatsAdapter()
 	eventhandler := event.NewEventRegistry(eventadapter)
 	serviceRegistry := registry.NewServiceRegistry(loadbalancer, eventhandler)
 
@@ -22,8 +22,12 @@ func main() {
 		service := &api.Service{}
 		ctx.BindJSON(service)
 
-		// TODO what can go wrong here?
-		serviceRegistry.Register(service)
+		err := serviceRegistry.Register(service)
+
+		if err != nil {
+			ctx.AbortWithError(500, err)
+			return
+		}
 
 		ctx.Status(200)
 	})
@@ -32,8 +36,12 @@ func main() {
 	srv.DELETE("/deregister/:id", func(ctx *gin.Context) {
 		id := ctx.Param("id")
 
-		// TODO what can go wrong here?
-		serviceRegistry.Deregister(id)
+		err := serviceRegistry.Deregister(id)
+
+		if err != nil {
+			ctx.AbortWithError(500, err)
+			return
+		}
 
 		ctx.Status(200)
 	})
@@ -55,7 +63,14 @@ func main() {
 		event := &api.Event{}
 		ctx.BindJSON(event)
 
-		eventhandler.Publish(event)
+		err := eventhandler.Publish(event)
+
+		if err != nil {
+			ctx.AbortWithError(500, err)
+			return
+		}
+
+		ctx.Status(200)
 	})
 
 	srv.Run(":8080")
