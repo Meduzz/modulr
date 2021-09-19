@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -10,6 +12,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type greetingLog struct {
+	Name string `json:"name"`
+}
+
 func main() {
 	srv := gin.Default()
 
@@ -17,6 +23,15 @@ func main() {
 		who := ctx.Param("who")
 
 		ctx.String(200, "Hello %s!", who)
+
+		go sendEvent(who)
+	})
+
+	srv.POST("/info", func(ctx *gin.Context) {
+		info := &greetingLog{}
+		ctx.BindJSON(info)
+
+		log.Printf("Greeted %s\n", info.Name)
 	})
 
 	register()
@@ -27,12 +42,19 @@ func main() {
 }
 
 func register() {
+	subs := make([]*api.Subscription, 0)
+	subs = append(subs, &api.Subscription{
+		Topic: "service1.info",
+		Path:  "/info",
+		Group: "service1",
+	})
 	service := api.Service{
-		ID:      "service1",
-		Name:    "service1",
-		Address: "localhost",
-		Port:    8081,
-		Context: "",
+		ID:            "service1",
+		Name:          "service1",
+		Address:       "localhost",
+		Port:          8081,
+		Context:       "",
+		Subscriptions: subs,
 	}
 	req, _ := client.POST("http://localhost:8080/register", service)
 	req.Do(http.DefaultClient)
@@ -48,4 +70,20 @@ func deregister() {
 	req.Do(http.DefaultClient)
 
 	os.Exit(0)
+}
+
+func sendEvent(greeted string) {
+	greeting := &greetingLog{
+		Name: greeted,
+	}
+
+	bs, _ := json.Marshal(greeting)
+
+	ev := api.Event{
+		Topic: "service1.info",
+		Body:  json.RawMessage(bs),
+	}
+
+	req, _ := client.POST("http://localhost:8080/publish", ev)
+	req.Do(http.DefaultClient)
 }

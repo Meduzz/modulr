@@ -122,8 +122,8 @@ func (s *subscriptionRegistry) eventHandler(sub *subscription) func([]byte) {
 		service := sub.Services[index]
 		index++
 
-		url := fmt.Sprintf("http://%s:%s/%s/%s", service.Address, service.Path, service.Context, service.Path)
-		req, err := client.POSTBytes(url, body)
+		url := fmt.Sprintf("http://%s:%d%s%s", service.Address, service.Port, service.Context, service.Path)
+		req, err := client.POSTBytes(url, body, "application/json")
 
 		if err != nil {
 			log.Printf("Creating request failed: %v\n", err)

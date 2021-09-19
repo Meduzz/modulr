@@ -2,6 +2,8 @@ package main
 
 import (
 	"github.com/Meduzz/modulr/api"
+	"github.com/Meduzz/modulr/event"
+	"github.com/Meduzz/modulr/event/natsadapter"
 	"github.com/Meduzz/modulr/proxy/httpadapter"
 	"github.com/Meduzz/modulr/registry"
 	"github.com/gin-gonic/gin"
@@ -11,7 +13,9 @@ func main() {
 	srv := gin.Default()
 
 	loadbalancer := httpadapter.NewLoadBalancer()
-	serviceRegistry := registry.NewServiceRegistry(loadbalancer)
+	eventadapter := natsadapter.NewNatsAdapter()
+	eventhandler := event.NewEventRegistry(eventadapter)
+	serviceRegistry := registry.NewServiceRegistry(loadbalancer, eventhandler)
 
 	// registers a service - naive version
 	srv.POST("/register", func(ctx *gin.Context) {
@@ -47,7 +51,12 @@ func main() {
 		delegate(ctx) // is this enough?
 	})
 
-	srv.POST("/publish")
+	srv.POST("/publish", func(ctx *gin.Context) {
+		event := &api.Event{}
+		ctx.BindJSON(event)
+
+		eventhandler.Publish(event)
+	})
 
 	srv.Run(":8080")
 }
