@@ -1,10 +1,12 @@
 package main
 
 import (
+	"github.com/Meduzz/helper/nuts"
 	"github.com/Meduzz/modulr/api"
+	deliverer "github.com/Meduzz/modulr/delivery/adapter"
 	"github.com/Meduzz/modulr/event"
-	"github.com/Meduzz/modulr/event/natsadapter"
-	"github.com/Meduzz/modulr/proxy/httpadapter"
+	eventadapter "github.com/Meduzz/modulr/event/adapter"
+	proxyadapter "github.com/Meduzz/modulr/proxy/adapter"
 	"github.com/Meduzz/modulr/registry"
 	"github.com/gin-gonic/gin"
 )
@@ -12,9 +14,18 @@ import (
 func main() {
 	srv := gin.Default()
 
-	loadbalancer := httpadapter.NewLoadBalancer()
-	eventadapter, _ := natsadapter.NewNatsAdapter()
-	eventhandler := event.NewEventRegistry(eventadapter)
+	conn, err := nuts.Connect()
+
+	if err != nil {
+		panic(err)
+	}
+
+	eventing := eventadapter.NewNatsAdapter(conn)
+	deliveryadapter := deliverer.NewHttpAdapter()
+
+	loadbalancer := proxyadapter.NewLoadBalancer()
+	eventhandler := event.NewEventRegistry(eventing, deliveryadapter)
+
 	serviceRegistry := registry.NewServiceRegistry(loadbalancer, eventhandler)
 
 	// registers a service - naive version

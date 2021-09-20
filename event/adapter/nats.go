@@ -1,9 +1,8 @@
-package natsadapter
+package adapter
 
 import (
 	"fmt"
 
-	"github.com/Meduzz/helper/nuts"
 	"github.com/Meduzz/modulr/event"
 	"github.com/nats-io/nats.go"
 )
@@ -15,19 +14,13 @@ type (
 	}
 )
 
-func NewNatsAdapter() (event.EventAdapter, error) {
-	conn, err := nuts.Connect()
-
-	if err != nil {
-		return nil, err
-	}
-
+func NewNatsAdapter(conn *nats.Conn) event.EventAdapter {
 	subs := make(map[string]*nats.Subscription)
 
 	return &adapter{
 		conn: conn,
 		subs: subs,
-	}, nil
+	}
 }
 
 func (a *adapter) Publish(topic string, routing string, body []byte) error {

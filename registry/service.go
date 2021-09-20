@@ -28,12 +28,10 @@ type (
 	}
 )
 
-// NewServiceRegistry - creates a new service registry with any provided children
+// NewServiceRegistry - creates a new service registry
 func NewServiceRegistry(children ...Lifecycle) ServiceRegistry {
-	svcs := make(map[string]*api.Service)
-
 	return &serviceRegistry{
-		services: svcs,
+		services: make(map[string]*api.Service),
 		children: children,
 	}
 }

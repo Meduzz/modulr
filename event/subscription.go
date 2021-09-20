@@ -3,10 +3,9 @@ package event
 import (
 	"fmt"
 	"log"
-	"net/http"
 
-	"github.com/Meduzz/helper/http/client"
 	"github.com/Meduzz/modulr/api"
+	"github.com/Meduzz/modulr/delivery"
 	"github.com/Meduzz/modulr/errorz"
 	"github.com/Meduzz/modulr/registry"
 )
@@ -30,18 +29,20 @@ type (
 	}
 
 	subscriptionRegistry struct {
-		adapter       EventAdapter
-		subscriptions map[string]*subscription // topic.routing.group -> subscription
+		adapter         EventAdapter
+		deliveryAdapter delivery.DeliveryAdapter
+		subscriptions   map[string]*subscription // topic.routing.group -> subscription
 	}
 )
 
 // NewEventRegistry - creates a new EventRegistry with the provided adapter
-func NewEventRegistry(adapter EventAdapter) EventRegistry {
+func NewEventRegistry(eventAdapter EventAdapter, deliveryAdapter delivery.DeliveryAdapter) EventRegistry {
 	subs := make(map[string]*subscription)
 
 	return &subscriptionRegistry{
-		adapter:       adapter,
-		subscriptions: subs,
+		adapter:         eventAdapter,
+		deliveryAdapter: deliveryAdapter,
+		subscriptions:   subs,
 	}
 }
 
@@ -154,22 +155,10 @@ func (s *subscriptionRegistry) eventHandler(sub *subscription) func([]byte) {
 		index++
 
 		url := fmt.Sprintf("http://%s:%d%s%s", service.Address, service.Port, service.Context, service.Path)
-		req, err := client.POSTBytes(url, body, "application/json")
+		err := s.deliveryAdapter.DeliverEvent(url, body)
 
 		if err != nil {
-			log.Printf("Creating request failed: %v\n", err)
-			return
-		}
-
-		res, err := req.Do(http.DefaultClient)
-
-		if err != nil {
-			log.Printf("Call to %s:%d returned error: %v\n", service.Address, service.Port, err)
-			return
-		}
-
-		if res.Code() != 200 {
-			log.Printf("Call to %s:%d from %s did not return 200\n", service.Address, service.Port, sub.Topic)
+			log.Printf("Delivering event to %s from topic %s(%s) threw error: %v\n", url, sub.Topic, sub.Routing, err)
 		}
 	}
 }

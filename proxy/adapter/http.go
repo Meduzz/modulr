@@ -1,4 +1,4 @@
-package httpadapter
+package adapter
 
 import (
 	"fmt"
@@ -8,45 +8,42 @@ import (
 	"strings"
 
 	"github.com/Meduzz/modulr/api"
-	"github.com/Meduzz/modulr/registry"
+	"github.com/Meduzz/modulr/proxy"
 	"github.com/vulcand/oxy/forward"
 	"github.com/vulcand/oxy/roundrobin"
 )
 
 type (
-	// LoadBalancer - interface for loadbalancing
-	LoadBalancer interface {
-		registry.Lifecycle
-		// Lookup - returns a http.HandlerFunc or nil
-		Lookup(string) http.HandlerFunc
-	}
-
-	proxy struct {
+	httpproxy struct {
 		lbs map[string]*roundrobin.RoundRobin // name -> loadbalancer
 	}
 
 	rewriter struct {
 		name string
 	}
+
+	chained struct {
+		rewriters []forward.ReqRewriter
+	}
 )
 
 // NewLoadBalancer - creates a new http loadbalancer
-func NewLoadBalancer() LoadBalancer {
+func NewLoadBalancer() proxy.LoadBalancer {
 	lbs := make(map[string]*roundrobin.RoundRobin)
 
-	return &proxy{
+	return &httpproxy{
 		lbs: lbs,
 	}
 }
 
-func (p *proxy) Register(service *api.Service) error {
+func (p *httpproxy) Register(service *api.Service) error {
 	lb, exists := p.lbs[service.Name]
 
 	if !exists {
 		// TODO errorhandling
 		// TODO circuitbreaker?
 		// TODO retries?
-		fwd, _ := forward.New(forward.Rewriter(&rewriter{service.Name}))
+		fwd, _ := forward.New(forward.Rewriter(chainedRewriters(&rewriter{service.Name})))
 		rr, _ := roundrobin.New(fwd)
 		p.lbs[service.Name] = rr
 		lb = rr
@@ -54,6 +51,7 @@ func (p *proxy) Register(service *api.Service) error {
 		log.Printf("Created loadbalanser for %s\n", service.Name)
 	}
 
+	// TODO it's only a matter of time before http becomes https
 	serviceUrl := &url.URL{
 		Scheme:  "http",
 		Host:    fmt.Sprintf("%s:%d", service.Address, service.Port),
@@ -66,13 +64,15 @@ func (p *proxy) Register(service *api.Service) error {
 	return lb.UpsertServer(serviceUrl)
 }
 
-func (p *proxy) Deregister(service *api.Service) error {
+func (p *httpproxy) Deregister(service *api.Service) error {
 	lb, exists := p.lbs[service.Name]
 
 	if !exists {
 		return nil
 	}
 
+	// TODO it's only a matter of time before http becomes https
+	// TODO code duplication...
 	serviceUrl := &url.URL{
 		Scheme:  "http",
 		Host:    fmt.Sprintf("%s:%d", service.Address, service.Port),
@@ -95,7 +95,7 @@ func (p *proxy) Deregister(service *api.Service) error {
 	return nil
 }
 
-func (p *proxy) Lookup(name string) http.HandlerFunc {
+func (p *httpproxy) Lookup(name string) http.HandlerFunc {
 	it, exists := p.lbs[name]
 
 	if !exists {
@@ -105,7 +105,24 @@ func (p *proxy) Lookup(name string) http.HandlerFunc {
 	return it.ServeHTTP
 }
 
+func chainedRewriters(rewriter forward.ReqRewriter) forward.ReqRewriter {
+	list := make([]forward.ReqRewriter, 0)
+	list = append(list, rewriter)
+	list = append(list, &forward.HeaderRewriter{false, ""})
+
+	return &chained{
+		rewriters: list,
+	}
+}
+
+// Request rewriter.
 func (r *rewriter) Rewrite(req *http.Request) {
 	req.URL.RawPath = strings.Replace(req.URL.RawPath, fmt.Sprintf("/call/%s", r.name), "", 1)
 	req.URL.Path = strings.Replace(req.URL.Path, fmt.Sprintf("/call/%s", r.name), "", 1)
+}
+
+func (c *chained) Rewrite(req *http.Request) {
+	for _, r := range c.rewriters {
+		r.Rewrite(req)
+	}
 }
