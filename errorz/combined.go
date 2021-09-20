@@ -34,6 +34,10 @@ func (e *CombinedError) Append(err error) {
 
 // Error - compile the sum of the appended errors
 func (e *CombinedError) Error() error {
+	if len(e.errors) == 1 {
+		return e.errors[0]
+	}
+
 	main := ""
 	for _, err := range e.errors {
 		main = fmt.Sprintf("%s\n%s", main, err.Error())

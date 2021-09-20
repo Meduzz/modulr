@@ -53,10 +53,11 @@ func main() {
 
 		if handler == nil {
 			ctx.Status(404)
+			return
 		}
 
 		delegate := gin.WrapF(handler)
-		delegate(ctx) // is this enough?
+		delegate(ctx)
 	})
 
 	srv.POST("/publish", func(ctx *gin.Context) {

@@ -2,6 +2,7 @@ package httpadapter
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -42,10 +43,15 @@ func (p *proxy) Register(service *api.Service) error {
 	lb, exists := p.lbs[service.Name]
 
 	if !exists {
+		// TODO errorhandling
+		// TODO circuitbreaker?
+		// TODO retries?
 		fwd, _ := forward.New(forward.Rewriter(&rewriter{service.Name}))
 		rr, _ := roundrobin.New(fwd)
 		p.lbs[service.Name] = rr
 		lb = rr
+
+		log.Printf("Created loadbalanser for %s\n", service.Name)
 	}
 
 	serviceUrl := &url.URL{
@@ -54,6 +60,8 @@ func (p *proxy) Register(service *api.Service) error {
 		Path:    service.Context,
 		RawPath: service.Context,
 	}
+
+	log.Printf("Adding %s to loadbalancer (%s)\n", serviceUrl.String(), service.Name)
 
 	return lb.UpsertServer(serviceUrl)
 }
@@ -71,6 +79,8 @@ func (p *proxy) Deregister(service *api.Service) error {
 		Path:    service.Context,
 		RawPath: service.Context,
 	}
+
+	log.Printf("Removing %s from loadbalancer (%s)\n", serviceUrl.String(), service.Name)
 
 	err := lb.RemoveServer(serviceUrl)
 

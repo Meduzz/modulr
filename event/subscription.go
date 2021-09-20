@@ -51,7 +51,10 @@ func (s *subscriptionRegistry) Register(service *api.Service) error {
 	for _, sub := range service.Subscriptions {
 		current, err := s.upsertSubscription(sub)
 
-		combined.Append(err)
+		if err != nil {
+			combined.Append(err)
+			continue
+		}
 
 		exists := false
 
@@ -71,6 +74,7 @@ func (s *subscriptionRegistry) Register(service *api.Service) error {
 			}
 
 			current.Services = append(current.Services, svc)
+			log.Printf("%s is now subscribed to topic:%s routing:%s group:%s\n", service.ID, sub.Topic, sub.Routing, sub.Group)
 		}
 	}
 
@@ -81,8 +85,12 @@ func (s *subscriptionRegistry) Deregister(service *api.Service) error {
 	combined := errorz.NewError(nil)
 
 	for _, sub := range service.Subscriptions {
-		current, err := s.upsertSubscription(sub) // TODO might have just created the subscription...
-		combined.Append(err)
+		current, err := s.upsertSubscription(sub) // TODO might have just created a subscription...
+
+		if err != nil {
+			combined.Append(err)
+			continue
+		}
 
 		copy := make([]*subscribee, 0)
 
@@ -93,6 +101,8 @@ func (s *subscriptionRegistry) Deregister(service *api.Service) error {
 		}
 
 		current.Services = copy
+
+		log.Printf("%s is now unsubscribed from topic:%s routing:%s group:%s\n", service.ID, sub.Topic, sub.Routing, sub.Group)
 
 		if len(current.Services) == 0 {
 			err = s.adapter.Unsubscribe(sub.Topic, sub.Routing, sub.Group)
@@ -125,6 +135,8 @@ func (s *subscriptionRegistry) upsertSubscription(sub *api.Subscription) (*subsc
 		if err != nil {
 			return nil, err
 		}
+
+		s.subscriptions[key] = it
 	}
 
 	return it, nil
