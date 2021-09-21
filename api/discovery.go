@@ -1,6 +1,10 @@
 package api
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+	"net/url"
+)
 
 type (
 	// Service - the service details the lib need to do its job
@@ -29,3 +33,13 @@ type (
 		Body    json.RawMessage `json:"body"`
 	}
 )
+
+func (s *Service) ToURL() *url.URL {
+	// TODO only a matter of time until https
+	return &url.URL{
+		Scheme:  "http",
+		Host:    fmt.Sprintf("%s:%d", s.Address, s.Port),
+		Path:    s.Context,
+		RawPath: s.Context,
+	}
+}

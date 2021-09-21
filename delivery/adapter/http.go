@@ -1,4 +1,4 @@
-package http
+package adapter
 
 import (
 	"fmt"

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"net/url"
 	"strings"
 
 	"github.com/Meduzz/modulr/api"
@@ -51,13 +50,7 @@ func (p *httpproxy) Register(service *api.Service) error {
 		log.Printf("Created loadbalanser for %s\n", service.Name)
 	}
 
-	// TODO it's only a matter of time before http becomes https
-	serviceUrl := &url.URL{
-		Scheme:  "http",
-		Host:    fmt.Sprintf("%s:%d", service.Address, service.Port),
-		Path:    service.Context,
-		RawPath: service.Context,
-	}
+	serviceUrl := service.ToURL()
 
 	log.Printf("Adding %s to loadbalancer (%s)\n", serviceUrl.String(), service.Name)
 
@@ -71,14 +64,7 @@ func (p *httpproxy) Deregister(service *api.Service) error {
 		return nil
 	}
 
-	// TODO it's only a matter of time before http becomes https
-	// TODO code duplication...
-	serviceUrl := &url.URL{
-		Scheme:  "http",
-		Host:    fmt.Sprintf("%s:%d", service.Address, service.Port),
-		Path:    service.Context,
-		RawPath: service.Context,
-	}
+	serviceUrl := service.ToURL()
 
 	log.Printf("Removing %s from loadbalancer (%s)\n", serviceUrl.String(), service.Name)
 
