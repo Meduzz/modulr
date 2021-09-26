@@ -1,4 +1,4 @@
-package event
+package registry
 
 import (
 	"encoding/json"
@@ -32,7 +32,7 @@ var (
 			},
 		},
 	}
-	event = &api.Event{
+	testEvent = &api.Event{
 		Topic:   "test",
 		Routing: "test",
 		Body:    json.RawMessage([]byte("test")),
@@ -99,7 +99,7 @@ func TestRegisterAgain(t *testing.T) {
 }
 
 func TestHappyPublishAndDelivery(t *testing.T) {
-	err := subject.Publish(event)
+	err := subject.Publish(testEvent)
 
 	if err != nil {
 		t.Error(err)
@@ -122,7 +122,7 @@ func TestHappyPublishAndDelivery(t *testing.T) {
 
 func TestHappyPublishUnhappyDelivery(t *testing.T) {
 	deliver = true
-	err := subject.Publish(event)
+	err := subject.Publish(testEvent)
 
 	if err != nil {
 		t.Error(err)
@@ -140,7 +140,7 @@ func TestHappyPublishUnhappyDelivery(t *testing.T) {
 
 func TestUnhappyPublish(t *testing.T) {
 	publish = true
-	err := subject.Publish(event)
+	err := subject.Publish(testEvent)
 
 	if err == nil {
 		t.Error("expected an error")

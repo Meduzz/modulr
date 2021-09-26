@@ -1,42 +1,46 @@
-package event
+package registry
 
 import (
 	"fmt"
 	"log"
 
 	"github.com/Meduzz/modulr/api"
-	"github.com/Meduzz/modulr/delivery"
 	"github.com/Meduzz/modulr/errorz"
-	"github.com/Meduzz/modulr/registry"
+	"github.com/Meduzz/modulr/event"
 )
 
 type (
 	// EventRegistry - event module api
 	EventRegistry interface {
-		registry.Lifecycle
+		Lifecycle
 		// Publish - api to publish an event
 		Publish(*api.Event) error
 	}
 
-	// EventAdapter - interface to be implemented by event adapters
-	EventAdapter interface {
-		// Publish - publish a payload to a topic with optional routingkey
-		Publish(string, string, []byte) error
-		// Subscribe - subscribe to a topic with optional routingkey and subscribergroup
-		Subscribe(string, string, string, func([]byte)) error
-		// Unsubscribe - unsubscribe to a topic with optional routingkey and subscribergroup
-		Unsubscribe(string, string, string) error
+	subscriptionRegistry struct {
+		adapter         event.EventAdapter
+		deliveryAdapter event.DeliveryAdapter
+		subscriptions   map[string]*subscription // topic.routing.group -> subscription
 	}
 
-	subscriptionRegistry struct {
-		adapter         EventAdapter
-		deliveryAdapter delivery.DeliveryAdapter
-		subscriptions   map[string]*subscription // topic.routing.group -> subscription
+	subscribee struct {
+		ID      string
+		Address string
+		Port    int
+		Context string
+		Path    string
+	}
+
+	subscription struct {
+		Topic    string
+		Routing  string
+		Group    string
+		Services []*subscribee
 	}
 )
 
 // NewEventRegistry - creates a new EventRegistry with the provided adapter
-func NewEventRegistry(eventAdapter EventAdapter, deliveryAdapter delivery.DeliveryAdapter) EventRegistry {
+func NewEventRegistry(eventAdapter event.EventAdapter, deliveryAdapter event.DeliveryAdapter) EventRegistry {
 	subs := make(map[string]*subscription)
 
 	return &subscriptionRegistry{

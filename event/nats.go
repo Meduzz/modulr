@@ -1,9 +1,8 @@
-package adapter
+package event
 
 import (
 	"fmt"
 
-	"github.com/Meduzz/modulr/event"
 	"github.com/nats-io/nats.go"
 )
 
@@ -14,7 +13,7 @@ type (
 	}
 )
 
-func NewNatsAdapter(conn *nats.Conn) event.EventAdapter {
+func NewNatsAdapter(conn *nats.Conn) EventAdapter {
 	subs := make(map[string]*nats.Subscription)
 
 	return &adapter{

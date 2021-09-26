@@ -1,16 +1,15 @@
-package adapter
+package event
 
 import (
 	"fmt"
 	"net/http"
 
 	"github.com/Meduzz/helper/http/client"
-	"github.com/Meduzz/modulr/delivery"
 )
 
 type httpAdapter struct{}
 
-func NewHttpAdapter() delivery.DeliveryAdapter {
+func NewHttpDeliveryAdapter() DeliveryAdapter {
 	return &httpAdapter{}
 }
 

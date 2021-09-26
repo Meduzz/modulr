@@ -3,10 +3,7 @@ package main
 import (
 	"github.com/Meduzz/helper/nuts"
 	"github.com/Meduzz/modulr/api"
-	deliverer "github.com/Meduzz/modulr/delivery/adapter"
 	"github.com/Meduzz/modulr/event"
-	eventadapter "github.com/Meduzz/modulr/event/adapter"
-	proxyadapter "github.com/Meduzz/modulr/proxy/adapter"
 	"github.com/Meduzz/modulr/registry"
 	"github.com/gin-gonic/gin"
 )
@@ -20,11 +17,11 @@ func main() {
 		panic(err)
 	}
 
-	eventing := eventadapter.NewNatsAdapter(conn)
-	deliveryadapter := deliverer.NewHttpAdapter()
+	eventing := event.NewNatsAdapter(conn)
+	deliveryadapter := event.NewHttpDeliveryAdapter()
 
-	loadbalancer := proxyadapter.NewLoadBalancer()
-	eventhandler := event.NewEventRegistry(eventing, deliveryadapter)
+	loadbalancer := registry.NewLoadBalancer()
+	eventhandler := registry.NewEventRegistry(eventing, deliveryadapter)
 
 	serviceRegistry := registry.NewServiceRegistry(loadbalancer, eventhandler)
 

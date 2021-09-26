@@ -1,4 +1,4 @@
-package adapter
+package event
 
 import (
 	"os"
@@ -8,13 +8,13 @@ import (
 )
 
 var (
-	event   = ""
-	subject = NewHttpAdapter()
-	srv     = gin.Default()
+	expectedData = ""
+	subject      = NewHttpDeliveryAdapter()
+	srv          = gin.Default()
 )
 
 func start() {
-	srv.Run(":8080")
+	srv.Run(":6060")
 }
 
 func TestMain(m *testing.M) {
@@ -26,7 +26,7 @@ func TestMain(m *testing.M) {
 			return
 		}
 
-		if event != string(bs) {
+		if expectedData != string(bs) {
 			ctx.Status(400)
 			return
 		}
@@ -41,8 +41,8 @@ func TestMain(m *testing.M) {
 
 func TestHappyCase(t *testing.T) {
 	text := "so happy!"
-	event = text
-	err := subject.DeliverEvent("http://localhost:8080/webhook", []byte(text))
+	expectedData = text
+	err := subject.DeliverEvent("http://localhost:6060/webhook", []byte(text))
 
 	if err != nil {
 		t.Error(err)
@@ -51,8 +51,8 @@ func TestHappyCase(t *testing.T) {
 
 func TestUnhappyCase(t *testing.T) {
 	text := "so unhapy!"
-	event = "something different"
-	err := subject.DeliverEvent("http://localhost:8080/webhook", []byte(text))
+	expectedData = "something different"
+	err := subject.DeliverEvent("http://localhost:6060/webhook", []byte(text))
 
 	if err == nil {
 		t.Errorf("expected an error")

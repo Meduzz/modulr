@@ -1,4 +1,4 @@
-package adapter
+package registry
 
 import (
 	"fmt"
@@ -7,12 +7,18 @@ import (
 	"strings"
 
 	"github.com/Meduzz/modulr/api"
-	"github.com/Meduzz/modulr/proxy"
 	"github.com/vulcand/oxy/forward"
 	"github.com/vulcand/oxy/roundrobin"
 )
 
 type (
+	// LoadBalancer - interface for loadbalancing
+	LoadBalancer interface {
+		Lifecycle
+		// Lookup - returns a http.HandlerFunc or nil
+		Lookup(string) http.HandlerFunc
+	}
+
 	httpproxy struct {
 		lbs map[string]*roundrobin.RoundRobin // name -> loadbalancer
 	}
@@ -27,7 +33,7 @@ type (
 )
 
 // NewLoadBalancer - creates a new http loadbalancer
-func NewLoadBalancer() proxy.LoadBalancer {
+func NewLoadBalancer() LoadBalancer {
 	lbs := make(map[string]*roundrobin.RoundRobin)
 
 	return &httpproxy{
@@ -94,7 +100,9 @@ func (p *httpproxy) Lookup(name string) http.HandlerFunc {
 func chainedRewriters(rewriter forward.ReqRewriter) forward.ReqRewriter {
 	list := make([]forward.ReqRewriter, 0)
 	list = append(list, rewriter)
-	list = append(list, &forward.HeaderRewriter{false, ""})
+	list = append(list, &forward.HeaderRewriter{
+		TrustForwardHeader: false,
+		Hostname:           ""})
 
 	return &chained{
 		rewriters: list,

@@ -1,18 +1,17 @@
 package event
 
 type (
-	subscribee struct {
-		ID      string
-		Address string
-		Port    int
-		Context string
-		Path    string
+	// EventAdapter - interface to be implemented by event adapters
+	EventAdapter interface {
+		// Publish - publish a payload to a topic with optional routingkey
+		Publish(string, string, []byte) error
+		// Subscribe - subscribe to a topic with optional routingkey and subscribergroup
+		Subscribe(string, string, string, func([]byte)) error
+		// Unsubscribe - unsubscribe to a topic with optional routingkey and subscribergroup
+		Unsubscribe(string, string, string) error
 	}
 
-	subscription struct {
-		Topic    string
-		Routing  string
-		Group    string
-		Services []*subscribee
+	DeliveryAdapter interface {
+		DeliverEvent(string, []byte) error
 	}
 )
