@@ -29,7 +29,6 @@ type (
 	}
 
 	// Subscription - details needed for an event subscriptions
-	// TODO do we want to allow client to control http method?
 	Subscription struct {
 		Topic   string `json:"topic"`   // topic/exchange
 		Routing string `json:"routing"` // routing key

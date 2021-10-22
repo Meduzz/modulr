@@ -90,28 +90,25 @@ func (s *subscriptionRegistry) Deregister(service api.Service) error {
 	combined := errorz.NewError(nil)
 
 	for _, sub := range service.GetSubscriptions() {
-		current, err := s.upsertSubscription(sub) // TODO might have just created a subscription...
+		current := s.getSubscription(sub)
 
-		if err != nil {
-			combined.Append(err)
-			continue
-		}
+		if current != nil {
+			copy := make([]*subscribee, 0)
 
-		copy := make([]*subscribee, 0)
-
-		for _, active := range current.Services {
-			if active.ID != service.GetID() {
-				copy = append(copy, active)
+			for _, active := range current.Services {
+				if active.ID != service.GetID() {
+					copy = append(copy, active)
+				}
 			}
-		}
 
-		current.Services = copy
+			current.Services = copy
 
-		log.Printf("%s is now unsubscribed from topic:%s routing:%s group:%s\n", service.GetID(), sub.Topic, sub.Routing, sub.Group)
+			log.Printf("%s is now unsubscribed from topic:%s routing:%s group:%s\n", service.GetID(), sub.Topic, sub.Routing, sub.Group)
 
-		if len(current.Services) == 0 {
-			err = s.adapter.Unsubscribe(sub.Topic, sub.Routing, sub.Group)
-			combined.Append(err)
+			if len(current.Services) == 0 {
+				err := s.adapter.Unsubscribe(sub.Topic, sub.Routing, sub.Group)
+				combined.Append(err)
+			}
 		}
 	}
 
@@ -123,11 +120,11 @@ func (s *subscriptionRegistry) Publish(event *api.Event) error {
 }
 
 func (s *subscriptionRegistry) upsertSubscription(sub *api.Subscription) (*subscription, error) {
-	key := fmt.Sprintf("%s.%s.%s", sub.Topic, sub.Routing, sub.Group)
+	it := s.getSubscription(sub)
 
-	it, exists := s.subscriptions[key]
+	if it == nil {
+		key := fmt.Sprintf("%s.%s.%s", sub.Topic, sub.Routing, sub.Group)
 
-	if !exists {
 		it = &subscription{
 			Topic:    sub.Topic,
 			Routing:  sub.Routing,
@@ -147,6 +144,12 @@ func (s *subscriptionRegistry) upsertSubscription(sub *api.Subscription) (*subsc
 	return it, nil
 }
 
+func (s *subscriptionRegistry) getSubscription(sub *api.Subscription) *subscription {
+	key := fmt.Sprintf("%s.%s.%s", sub.Topic, sub.Routing, sub.Group)
+
+	return s.subscriptions[key]
+}
+
 // TODO do something smarter with errors
 func (s *subscriptionRegistry) eventHandler(sub *subscription) func([]byte) {
 	index := 0
@@ -158,6 +161,7 @@ func (s *subscriptionRegistry) eventHandler(sub *subscription) func([]byte) {
 		service := sub.Services[index]
 		index++
 
+		// TODO assuming http
 		url := fmt.Sprintf("http://%s:%d%s%s", service.Address, service.Port, service.Context, service.Path)
 		err := s.deliveryAdapter.DeliverEvent(url, body)
 
