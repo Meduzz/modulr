@@ -53,7 +53,7 @@ func register(port int) {
 		Path:  "/info",
 		Group: "service1",
 	})
-	service := api.Service{
+	service := api.DefaultService{
 		ID:            fmt.Sprintf("%d", port),
 		Name:          "service1",
 		Address:       "localhost",

@@ -41,30 +41,30 @@ func NewLoadBalancer() LoadBalancer {
 	}
 }
 
-func (p *httpproxy) Register(service *api.Service) error {
-	lb, exists := p.lbs[service.Name]
+func (p *httpproxy) Register(service api.Service) error {
+	lb, exists := p.lbs[service.GetName()]
 
 	if !exists {
 		// TODO errorhandling
 		// TODO circuitbreaker?
 		// TODO retries?
-		fwd, _ := forward.New(forward.Rewriter(chainedRewriters(&rewriter{service.Name})))
+		fwd, _ := forward.New(forward.Rewriter(chainedRewriters(&rewriter{service.GetName()})))
 		rr, _ := roundrobin.New(fwd)
-		p.lbs[service.Name] = rr
+		p.lbs[service.GetName()] = rr
 		lb = rr
 
-		log.Printf("Created loadbalanser for %s\n", service.Name)
+		log.Printf("Created loadbalanser for %s\n", service.GetName())
 	}
 
 	serviceUrl := service.ToURL()
 
-	log.Printf("Adding %s to loadbalancer (%s)\n", serviceUrl.String(), service.Name)
+	log.Printf("Adding %s to loadbalancer (%s)\n", serviceUrl.String(), service.GetName())
 
 	return lb.UpsertServer(serviceUrl)
 }
 
-func (p *httpproxy) Deregister(service *api.Service) error {
-	lb, exists := p.lbs[service.Name]
+func (p *httpproxy) Deregister(service api.Service) error {
+	lb, exists := p.lbs[service.GetName()]
 
 	if !exists {
 		return nil
@@ -72,7 +72,7 @@ func (p *httpproxy) Deregister(service *api.Service) error {
 
 	serviceUrl := service.ToURL()
 
-	log.Printf("Removing %s from loadbalancer (%s)\n", serviceUrl.String(), service.Name)
+	log.Printf("Removing %s from loadbalancer (%s)\n", serviceUrl.String(), service.GetName())
 
 	err := lb.RemoveServer(serviceUrl)
 
@@ -81,7 +81,7 @@ func (p *httpproxy) Deregister(service *api.Service) error {
 	}
 
 	if len(lb.Servers()) == 0 {
-		delete(p.lbs, service.Name)
+		delete(p.lbs, service.GetName())
 	}
 
 	return nil

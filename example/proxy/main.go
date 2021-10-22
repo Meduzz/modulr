@@ -27,7 +27,7 @@ func main() {
 
 	// registers a service - naive version
 	srv.POST("/register", func(ctx *gin.Context) {
-		service := &api.Service{}
+		service := &api.DefaultService{}
 		ctx.BindJSON(service)
 
 		err := serviceRegistry.Register(service)

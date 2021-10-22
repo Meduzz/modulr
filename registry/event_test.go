@@ -17,7 +17,7 @@ var (
 	publish         = false
 	deliver         = false
 	subject         = NewEventRegistry(eventadapter, deliveryadapter)
-	service         = &api.Service{
+	service         = &api.DefaultService{
 		ID:      "1",
 		Name:    "test",
 		Address: "localhost",
@@ -176,7 +176,7 @@ func TestUnhappyUnsubscribe(t *testing.T) {
 }
 
 func TestHappyUnsubscribeUnhappySubscribe(t *testing.T) {
-	service2 := &api.Service{}
+	service2 := &api.DefaultService{}
 	*service2 = *service
 	service2.ID = "2"
 	service2.Port = 1026
@@ -198,7 +198,7 @@ func TestHappyUnsubscribeUnhappySubscribe(t *testing.T) {
 }
 
 func TestHappyUnsubscribeHappySubscribe(t *testing.T) {
-	service2 := &api.Service{}
+	service2 := &api.DefaultService{}
 	*service2 = *service
 	service2.ID = "2"
 	service2.Port = 1026

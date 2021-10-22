@@ -50,10 +50,10 @@ func NewEventRegistry(eventAdapter event.EventAdapter, deliveryAdapter event.Del
 	}
 }
 
-func (s *subscriptionRegistry) Register(service *api.Service) error {
+func (s *subscriptionRegistry) Register(service api.Service) error {
 	combined := errorz.NewError(nil)
 
-	for _, sub := range service.Subscriptions {
+	for _, sub := range service.GetSubscriptions() {
 		current, err := s.upsertSubscription(sub)
 
 		if err != nil {
@@ -64,32 +64,32 @@ func (s *subscriptionRegistry) Register(service *api.Service) error {
 		exists := false
 
 		for _, existing := range current.Services {
-			if existing.ID == service.ID {
+			if existing.ID == service.GetID() {
 				exists = true
 			}
 		}
 
 		if !exists {
 			svc := &subscribee{
-				ID:      service.ID,
-				Address: service.Address,
-				Port:    service.Port,
-				Context: service.Context,
+				ID:      service.GetID(),
+				Address: service.GetAddress(),
+				Port:    service.GetPort(),
+				Context: service.GetContext(),
 				Path:    sub.Path,
 			}
 
 			current.Services = append(current.Services, svc)
-			log.Printf("%s is now subscribed to topic:%s routing:%s group:%s\n", service.ID, sub.Topic, sub.Routing, sub.Group)
+			log.Printf("%s is now subscribed to topic:%s routing:%s group:%s\n", service.GetID(), sub.Topic, sub.Routing, sub.Group)
 		}
 	}
 
 	return combined.Error()
 }
 
-func (s *subscriptionRegistry) Deregister(service *api.Service) error {
+func (s *subscriptionRegistry) Deregister(service api.Service) error {
 	combined := errorz.NewError(nil)
 
-	for _, sub := range service.Subscriptions {
+	for _, sub := range service.GetSubscriptions() {
 		current, err := s.upsertSubscription(sub) // TODO might have just created a subscription...
 
 		if err != nil {
@@ -100,14 +100,14 @@ func (s *subscriptionRegistry) Deregister(service *api.Service) error {
 		copy := make([]*subscribee, 0)
 
 		for _, active := range current.Services {
-			if active.ID != service.ID {
+			if active.ID != service.GetID() {
 				copy = append(copy, active)
 			}
 		}
 
 		current.Services = copy
 
-		log.Printf("%s is now unsubscribed from topic:%s routing:%s group:%s\n", service.ID, sub.Topic, sub.Routing, sub.Group)
+		log.Printf("%s is now unsubscribed from topic:%s routing:%s group:%s\n", service.GetID(), sub.Topic, sub.Routing, sub.Group)
 
 		if len(current.Services) == 0 {
 			err = s.adapter.Unsubscribe(sub.Topic, sub.Routing, sub.Group)
