@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/Meduzz/modulr/api"
+	"github.com/Meduzz/modulr/loadbalancer"
 )
 
 var (
@@ -16,7 +17,7 @@ var (
 	unsubscribe     = false
 	publish         = false
 	deliver         = false
-	subject         = NewEventRegistry(eventadapter, deliveryadapter)
+	subject         = NewEventRegistry(eventadapter, deliveryadapter, loadbalancer.NewRoundRobinFactory())
 	service         = &api.DefaultService{
 		ID:      "1",
 		Name:    "test",
@@ -46,13 +47,21 @@ type (
 
 	da struct {
 	}
+
+	sr struct {
+		service api.Service
+	}
 )
+
+func TestMain(m *testing.M) {
+	subject.ServiceRegistry(&sr{service})
+}
 
 // all these tests depends on each other :-(
 
 func TestUnhappySubscribe(t *testing.T) {
 	subscribe = true
-	err := subject.Register(service)
+	err := subject.RegisterService(service.GetName(), service)
 
 	if err == nil {
 		t.Error("expected an error")
@@ -70,7 +79,7 @@ func TestUnhappySubscribe(t *testing.T) {
 }
 
 func TestHappySubscribe(t *testing.T) {
-	err := subject.Register(service)
+	err := subject.RegisterService(service.GetName(), service)
 
 	if err != nil {
 		t.Error(err)
@@ -79,18 +88,6 @@ func TestHappySubscribe(t *testing.T) {
 	topic := <-logg
 	if topic != "test test test" {
 		t.Error("topic did not match")
-	}
-
-	if len(logg) > 0 {
-		t.Error("there are more logs")
-	}
-}
-
-func TestRegisterAgain(t *testing.T) {
-	err := subject.Register(service)
-
-	if err != nil {
-		t.Error(err)
 	}
 
 	if len(logg) > 0 {
@@ -158,7 +155,7 @@ func TestUnhappyPublish(t *testing.T) {
 func TestUnhappyUnsubscribe(t *testing.T) {
 	unsubscribe = true
 
-	err := subject.Deregister(service)
+	err := subject.DeregisterService(service.GetName(), service)
 
 	if err == nil {
 		t.Error("expected an error")
@@ -181,10 +178,10 @@ func TestHappyUnsubscribeUnhappySubscribe(t *testing.T) {
 	service2.ID = "2"
 	service2.Port = 1026
 
-	subject.Register(service2)
+	subject.RegisterService(service2.GetName(), service2)
 
 	subscribe = true
-	err := subject.Deregister(service)
+	err := subject.DeregisterService(service.GetName(), service)
 
 	if err != nil {
 		t.Error(err)
@@ -203,13 +200,13 @@ func TestHappyUnsubscribeHappySubscribe(t *testing.T) {
 	service2.ID = "2"
 	service2.Port = 1026
 
-	err := subject.Deregister(service2)
+	err := subject.DeregisterService(service2.GetName(), service2)
 
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = subject.Deregister(service)
+	err = subject.DeregisterService(service.GetName(), service)
 
 	if err != nil {
 		t.Error(err)
@@ -271,4 +268,16 @@ func (d *da) DeliverEvent(url string, event []byte) error {
 
 	logg <- fmt.Sprintf("%s %s", url, string(event))
 	return nil
+}
+
+func (s *sr) Register(api.Service) error {
+	return nil
+}
+
+func (s *sr) Deregister(string, string) error {
+	return nil
+}
+
+func (s *sr) Lookup(string) []api.Service {
+	return []api.Service{s.service}
 }

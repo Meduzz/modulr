@@ -71,7 +71,7 @@ func deregister(id int) {
 
 	<-c
 
-	req, _ := client.DELETE(fmt.Sprintf("http://localhost:8080/deregister/%d", id), nil)
+	req, _ := client.DELETE(fmt.Sprintf("http://localhost:8080/deregister/service1/%d", id), nil)
 	req.Do(http.DefaultClient)
 
 	os.Exit(0)

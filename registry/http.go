@@ -7,24 +7,27 @@ import (
 	"strings"
 
 	"github.com/Meduzz/modulr/api"
+	"github.com/Meduzz/modulr/loadbalancer"
 	"github.com/vulcand/oxy/forward"
-	"github.com/vulcand/oxy/roundrobin"
 )
 
 type (
 	// LoadBalancer - interface for loadbalancing
 	LoadBalancer interface {
 		Lifecycle
-		// Lookup - returns a http.HandlerFunc or nil
+		// Lookup - find service by name and return a http.HandlerFunc or nil
 		Lookup(string) http.HandlerFunc
 	}
 
 	httpproxy struct {
-		lbs map[string]*roundrobin.RoundRobin // name -> loadbalancer
+		forwarder map[string]*forward.Forwarder        // id -> forwarder
+		lbs       map[string]loadbalancer.LoadBalancer // name -> loadbalancer
+		registry  ServiceRegistry
+		factory   loadbalancer.LoadBalancerFactory
 	}
 
 	rewriter struct {
-		name string
+		service api.Service
 	}
 
 	chained struct {
@@ -33,68 +36,81 @@ type (
 )
 
 // NewLoadBalancer - creates a new http loadbalancer
-func NewLoadBalancer() LoadBalancer {
-	lbs := make(map[string]*roundrobin.RoundRobin)
+func NewLoadBalancer(factory loadbalancer.LoadBalancerFactory) LoadBalancer {
+	forwarders := make(map[string]*forward.Forwarder)
+	lbs := make(map[string]loadbalancer.LoadBalancer)
 
 	return &httpproxy{
-		lbs: lbs,
+		forwarder: forwarders,
+		lbs:       lbs,
+		factory:   factory,
 	}
 }
 
-func (p *httpproxy) Register(service api.Service) error {
-	lb, exists := p.lbs[service.GetName()]
+func (p *httpproxy) RegisterService(name string, service api.Service) error {
+	p.lbs[name] = p.factory.Create()
 
-	if !exists {
-		// TODO errorhandling
-		// TODO circuitbreaker?
-		// TODO retries?
-		fwd, _ := forward.New(forward.Rewriter(chainedRewriters(&rewriter{service.GetName()})))
-		rr, _ := roundrobin.New(fwd)
-		p.lbs[service.GetName()] = rr
-		lb = rr
-
-		log.Printf("Created loadbalanser for %s\n", service.GetName())
-	}
-
-	serviceUrl := service.ToURL()
-
-	log.Printf("Adding %s to loadbalancer (%s)\n", serviceUrl.String(), service.GetName())
-
-	return lb.UpsertServer(serviceUrl)
+	return nil
 }
 
-func (p *httpproxy) Deregister(service api.Service) error {
-	lb, exists := p.lbs[service.GetName()]
+func (p *httpproxy) DeregisterService(name string, service api.Service) error {
+	delete(p.lbs, name)
 
-	if !exists {
-		return nil
-	}
+	return nil
+}
 
-	serviceUrl := service.ToURL()
-
-	log.Printf("Removing %s from loadbalancer (%s)\n", serviceUrl.String(), service.GetName())
-
-	err := lb.RemoveServer(serviceUrl)
+func (p *httpproxy) RegisterInstance(service api.Service) error {
+	// TODO errorhandling
+	// TODO circuitbreaker?
+	// TODO retries?
+	fwd, err := forward.New(forward.Rewriter(chainedRewriters(&rewriter{service})))
 
 	if err != nil {
 		return err
 	}
 
-	if len(lb.Servers()) == 0 {
-		delete(p.lbs, service.GetName())
-	}
+	p.forwarder[service.GetID()] = fwd
+
+	log.Printf("Created loadbalanser for %s\n", service.GetName())
+
+	return nil
+}
+
+func (p *httpproxy) DeregisterInstance(service api.Service) error {
+	delete(p.forwarder, service.GetID())
+
+	log.Printf("Removing %s from loadbalancer (%s)\n", service.GetID(), service.GetName())
 
 	return nil
 }
 
 func (p *httpproxy) Lookup(name string) http.HandlerFunc {
-	it, exists := p.lbs[name]
+	lb, exists := p.lbs[name]
 
 	if !exists {
+		// TOOD we're out of sync
 		return nil
 	}
 
-	return it.ServeHTTP
+	services := p.registry.Lookup(name)
+	service := lb.Next(services)
+
+	if service == nil {
+		return nil
+	}
+
+	handler, exists := p.forwarder[service.GetID()]
+
+	if !exists {
+		// TODO we're out of sync...
+		return nil
+	}
+
+	return handler.ServeHTTP
+}
+
+func (p *httpproxy) ServiceRegistry(registry ServiceRegistry) {
+	p.registry = registry
 }
 
 func chainedRewriters(rewriter forward.ReqRewriter) forward.ReqRewriter {
@@ -109,12 +125,16 @@ func chainedRewriters(rewriter forward.ReqRewriter) forward.ReqRewriter {
 	}
 }
 
-// Request rewriter.
+// Host/Path request rewriter.
 func (r *rewriter) Rewrite(req *http.Request) {
-	req.URL.RawPath = strings.Replace(req.URL.RawPath, fmt.Sprintf("/call/%s", r.name), "", 1)
-	req.URL.Path = strings.Replace(req.URL.Path, fmt.Sprintf("/call/%s", r.name), "", 1)
+	req.URL.RawPath = strings.Replace(req.URL.RawPath, fmt.Sprintf("/call/%s", r.service.GetName()), "", 1)
+	req.URL.Path = strings.Replace(req.URL.Path, fmt.Sprintf("/call/%s", r.service.GetName()), "", 1)
+	req.URL.Host = fmt.Sprintf("%s:%d", r.service.GetAddress(), r.service.GetPort())
+	// TODO assuming http
+	req.URL.Scheme = "http"
 }
 
+// Chained request rewriter
 func (c *chained) Rewrite(req *http.Request) {
 	for _, r := range c.rewriters {
 		r.Rewrite(req)

@@ -4,6 +4,7 @@ import (
 	"github.com/Meduzz/helper/nuts"
 	"github.com/Meduzz/modulr/api"
 	"github.com/Meduzz/modulr/event"
+	"github.com/Meduzz/modulr/loadbalancer"
 	"github.com/Meduzz/modulr/registry"
 	"github.com/gin-gonic/gin"
 )
@@ -17,11 +18,12 @@ func main() {
 		panic(err)
 	}
 
+	factory := loadbalancer.NewRoundRobinFactory()
 	eventing := event.NewNatsAdapter(conn)
 	deliveryadapter := event.NewHttpDeliveryAdapter()
 
-	loadbalancer := registry.NewLoadBalancer()
-	eventhandler := registry.NewEventRegistry(eventing, deliveryadapter)
+	loadbalancer := registry.NewLoadBalancer(factory)
+	eventhandler := registry.NewEventRegistry(eventing, deliveryadapter, factory)
 
 	serviceRegistry := registry.NewServiceRegistry(loadbalancer, eventhandler)
 
@@ -41,10 +43,11 @@ func main() {
 	})
 
 	// deregisters a service - naive version
-	srv.DELETE("/deregister/:id", func(ctx *gin.Context) {
+	srv.DELETE("/deregister/:name/:id", func(ctx *gin.Context) {
+		name := ctx.Param("name")
 		id := ctx.Param("id")
 
-		err := serviceRegistry.Deregister(id)
+		err := serviceRegistry.Deregister(name, id)
 
 		if err != nil {
 			ctx.AbortWithError(500, err)
