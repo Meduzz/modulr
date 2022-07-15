@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/Meduzz/modulr/api"
 	"github.com/Meduzz/modulr/loadbalancer"
@@ -25,7 +26,7 @@ var (
 		Port:    1025,
 		Context: "/test",
 		Subscriptions: []*api.Subscription{
-			&api.Subscription{
+			{
 				Topic:   "test",
 				Routing: "test",
 				Group:   "test",
@@ -227,6 +228,40 @@ func TestHappyUnsubscribeHappySubscribe(t *testing.T) {
 	}
 }
 
+func TestHappyRequest(t *testing.T) {
+	res, err := subject.Request(testEvent, "3s")
+
+	if err != nil {
+		t.Errorf("there was an error: %v", err)
+	}
+
+	if res == nil {
+		t.Error("there was no response")
+	}
+
+	if string(res) != string(testEvent.Body) {
+		t.Errorf("the response did not match, was: %s", string(res))
+	}
+}
+
+func TestUnhappyRequest(t *testing.T) {
+	publish = true
+	_, err := subject.Request(testEvent, "3s")
+
+	if err == nil {
+		t.Errorf("expected an error")
+	}
+	publish = true
+}
+
+func TestInvalidMaxWait(t *testing.T) {
+	_, err := subject.Request(testEvent, "asdf")
+
+	if err == nil {
+		t.Errorf("expected invalid duration to cause error")
+	}
+}
+
 func (e *ea) Subscribe(topic, routing, group string, handler func([]byte)) error {
 	if subscribe {
 		return fmt.Errorf("subscribe")
@@ -259,6 +294,20 @@ func (e *ea) Publish(topic, routing string, event []byte) error {
 	}
 
 	return fmt.Errorf("e.handler was nil")
+}
+
+func (e *ea) Request(topic, routing string, body []byte, maxWait string) ([]byte, error) {
+	_, err := time.ParseDuration(maxWait)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if publish {
+		return nil, fmt.Errorf("publish")
+	}
+
+	return body, nil
 }
 
 func (d *da) DeliverEvent(url string, event []byte) error {

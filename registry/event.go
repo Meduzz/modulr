@@ -16,6 +16,8 @@ type (
 		Lifecycle
 		// Publish - api to publish an event
 		Publish(*api.Event) error
+		// Request - api to rpc over event adapter
+		Request(*api.Event, string) ([]byte, error)
 	}
 
 	subscriptionRegistry struct {
@@ -81,6 +83,10 @@ func (s *subscriptionRegistry) DeregisterInstance(service api.Service) error {
 
 func (s *subscriptionRegistry) Publish(event *api.Event) error {
 	return s.adapter.Publish(event.Topic, event.Routing, event.Body)
+}
+
+func (s *subscriptionRegistry) Request(event *api.Event, maxWait string) ([]byte, error) {
+	return s.adapter.Request(event.Topic, event.Routing, event.Body, maxWait)
 }
 
 func (s *subscriptionRegistry) ServiceRegistry(registry ServiceRegistry) {

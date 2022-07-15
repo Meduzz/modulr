@@ -2,6 +2,7 @@ package event
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/nats-io/nats.go"
 )
@@ -63,4 +64,20 @@ func (a *adapter) Unsubscribe(topic, routing, group string) error {
 	}
 
 	return nil
+}
+
+func (a *adapter) Request(topic, routing string, body []byte, maxWait string) ([]byte, error) {
+	duration, err := time.ParseDuration(maxWait)
+
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := a.conn.Request(topic, body, duration)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return res.Data, nil
 }

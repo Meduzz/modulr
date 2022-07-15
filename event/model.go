@@ -9,6 +9,8 @@ type (
 		Subscribe(string, string, string, func([]byte)) error
 		// Unsubscribe - unsubscribe to a topic with optional routingkey and subscribergroup
 		Unsubscribe(string, string, string) error
+		// Request - do a rpc request over the event adapter
+		Request(string, string, []byte, string) ([]byte, error)
 	}
 
 	DeliveryAdapter interface {
