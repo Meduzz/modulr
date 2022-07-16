@@ -2,7 +2,6 @@ package registry
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 
@@ -12,18 +11,15 @@ import (
 )
 
 type (
-	// LoadBalancer - interface for loadbalancing
-	LoadBalancer interface {
-		Lifecycle
+	// HttpProxy - interface for http loadbalancing
+	HttpProxy interface {
 		// Lookup - find service by name and return a http.HandlerFunc or nil
 		Lookup(string) http.HandlerFunc
 	}
 
 	httpproxy struct {
-		forwarder map[string]*forward.Forwarder        // id -> forwarder
-		lbs       map[string]loadbalancer.LoadBalancer // name -> loadbalancer
-		registry  ServiceRegistry
-		factory   loadbalancer.LoadBalancerFactory
+		registry ServiceRegistry
+		factory  loadbalancer.LoadBalancerFactory
 	}
 
 	rewriter struct {
@@ -35,82 +31,34 @@ type (
 	}
 )
 
-// NewLoadBalancer - creates a new http loadbalancer
-func NewLoadBalancer(factory loadbalancer.LoadBalancerFactory) LoadBalancer {
-	forwarders := make(map[string]*forward.Forwarder)
-	lbs := make(map[string]loadbalancer.LoadBalancer)
-
+// NewHttpProxy - creates a new http loadbalancer
+func NewHttpProxy(registry ServiceRegistry, factory loadbalancer.LoadBalancerFactory) HttpProxy {
 	return &httpproxy{
-		forwarder: forwarders,
-		lbs:       lbs,
-		factory:   factory,
+		factory:  factory,
+		registry: registry,
 	}
-}
-
-func (p *httpproxy) RegisterService(name string, service api.Service) error {
-	p.lbs[name] = p.factory.Create()
-
-	return nil
-}
-
-func (p *httpproxy) DeregisterService(name string, service api.Service) error {
-	delete(p.lbs, name)
-
-	return nil
-}
-
-func (p *httpproxy) RegisterInstance(service api.Service) error {
-	// TODO errorhandling
-	// TODO circuitbreaker?
-	// TODO retries?
-	fwd, err := forward.New(forward.Rewriter(chainedRewriters(&rewriter{service})))
-
-	if err != nil {
-		return err
-	}
-
-	p.forwarder[service.GetID()] = fwd
-
-	log.Printf("Created loadbalanser for %s\n", service.GetName())
-
-	return nil
-}
-
-func (p *httpproxy) DeregisterInstance(service api.Service) error {
-	delete(p.forwarder, service.GetID())
-
-	log.Printf("Removing %s from loadbalancer (%s)\n", service.GetID(), service.GetName())
-
-	return nil
 }
 
 func (p *httpproxy) Lookup(name string) http.HandlerFunc {
-	lb, exists := p.lbs[name]
-
-	if !exists {
-		// TOOD we're out of sync
-		return nil
-	}
-
 	services := p.registry.Lookup(name)
+	lb := p.factory.For(name)
+
 	service := lb.Next(services)
 
 	if service == nil {
 		return nil
 	}
 
-	handler, exists := p.forwarder[service.GetID()]
+	// TODO errorhandling
+	// TODO circuitbreaker?
+	// TODO retries?
+	handler, err := forward.New(forward.Rewriter(chainedRewriters(&rewriter{service})))
 
-	if !exists {
-		// TODO we're out of sync...
+	if err != nil {
 		return nil
 	}
 
 	return handler.ServeHTTP
-}
-
-func (p *httpproxy) ServiceRegistry(registry ServiceRegistry) {
-	p.registry = registry
 }
 
 func chainedRewriters(rewriter forward.ReqRewriter) forward.ReqRewriter {

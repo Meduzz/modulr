@@ -13,6 +13,10 @@ type (
 		Deregister(string, string) error
 		// Lookup - fetch services by name, never null
 		Lookup(string) []api.Service
+		// Plugin - register a lifecycle plugin
+		Plugin(Lifecycle)
+		// Start - tell the service registry to cold start
+		Start() error
 	}
 
 	// Lifecycle - provides lifecycle methods for child modules.
@@ -25,8 +29,6 @@ type (
 		RegisterInstance(api.Service) error
 		// DeregisterInstance - one service instance was removed from the registry
 		DeregisterInstance(api.Service) error
-		// ServiceRegistry - set service registry
-		ServiceRegistry(ServiceRegistry)
 	}
 
 	serviceRegistry struct {
@@ -36,14 +38,10 @@ type (
 )
 
 // NewServiceRegistry - creates a new service registry
-func NewServiceRegistry(children ...Lifecycle) ServiceRegistry {
+func NewServiceRegistry() ServiceRegistry {
 	registry := &serviceRegistry{
 		services: make(map[string][]api.Service),
-		children: children,
-	}
-
-	for _, child := range children {
-		child.ServiceRegistry(registry)
+		children: make([]Lifecycle, 0),
 	}
 
 	return registry
@@ -113,4 +111,12 @@ func (s *serviceRegistry) Lookup(name string) []api.Service {
 	}
 
 	return it
+}
+
+func (s *serviceRegistry) Plugin(lc Lifecycle) {
+	s.children = append(s.children, lc)
+}
+
+func (s *serviceRegistry) Start() error {
+	return nil
 }

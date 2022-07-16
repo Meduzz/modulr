@@ -18,7 +18,6 @@ var (
 	unsubscribe     = false
 	publish         = false
 	deliver         = false
-	subject         = NewEventRegistry(eventadapter, deliveryadapter, loadbalancer.NewRoundRobinFactory())
 	service         = &api.DefaultService{
 		ID:      "1",
 		Name:    "test",
@@ -34,6 +33,8 @@ var (
 			},
 		},
 	}
+	registry  = NewServiceRegistry()
+	subject   = NewEventProxy(registry, eventadapter, deliveryadapter, loadbalancer.NewRoundRobinFactory())
 	testEvent = &api.Event{
 		Topic:   "test",
 		Routing: "test",
@@ -48,14 +49,10 @@ type (
 
 	da struct {
 	}
-
-	sr struct {
-		service api.Service
-	}
 )
 
 func TestMain(m *testing.M) {
-	subject.ServiceRegistry(&sr{service})
+	registry.Register(service)
 }
 
 // all these tests depends on each other :-(
@@ -317,16 +314,4 @@ func (d *da) DeliverEvent(url string, event []byte) error {
 
 	logg <- fmt.Sprintf("%s %s", url, string(event))
 	return nil
-}
-
-func (s *sr) Register(api.Service) error {
-	return nil
-}
-
-func (s *sr) Deregister(string, string) error {
-	return nil
-}
-
-func (s *sr) Lookup(string) []api.Service {
-	return []api.Service{s.service}
 }

@@ -11,8 +11,8 @@ import (
 )
 
 type (
-	// EventRegistry - event module api
-	EventRegistry interface {
+	// EventProxy - api to proxy events from and to http
+	EventProxy interface {
 		Lifecycle
 		// Publish - api to publish an event
 		Publish(*api.Event) error
@@ -23,33 +23,34 @@ type (
 	subscriptionRegistry struct {
 		adapter         event.EventAdapter
 		deliveryAdapter event.DeliveryAdapter
-		subscriptions   map[string]loadbalancer.LoadBalancer // name -> loadbalancer
 		registry        ServiceRegistry
 		factory         loadbalancer.LoadBalancerFactory
 	}
 )
 
-// NewEventRegistry - creates a new EventRegistry with the provided adapter
-func NewEventRegistry(eventAdapter event.EventAdapter,
+// NewEventProxy - creates a new EventRegistry with the provided adapter
+func NewEventProxy(registry ServiceRegistry,
+	eventAdapter event.EventAdapter,
 	deliveryAdapter event.DeliveryAdapter,
-	factory loadbalancer.LoadBalancerFactory) EventRegistry {
+	factory loadbalancer.LoadBalancerFactory) EventProxy {
 
-	subs := make(map[string]loadbalancer.LoadBalancer)
-
-	return &subscriptionRegistry{
+	sub := &subscriptionRegistry{
 		adapter:         eventAdapter,
 		deliveryAdapter: deliveryAdapter,
-		subscriptions:   subs,
 		factory:         factory,
+		registry:        registry,
 	}
+
+	registry.Plugin(sub)
+
+	return sub
 }
 
 func (s *subscriptionRegistry) RegisterService(name string, service api.Service) error {
 	combined := errorz.NewError(nil)
 
 	for _, sub := range service.GetSubscriptions() {
-		lb := s.factory.Create()
-		err := s.adapter.Subscribe(sub.Topic, sub.Routing, sub.Group, s.eventHandler(name, sub, lb))
+		err := s.adapter.Subscribe(sub.Topic, sub.Routing, sub.Group, s.eventHandler(name, sub))
 
 		if err != nil {
 			combined.Append(err)
@@ -89,13 +90,10 @@ func (s *subscriptionRegistry) Request(event *api.Event, maxWait string) ([]byte
 	return s.adapter.Request(event.Topic, event.Routing, event.Body, maxWait)
 }
 
-func (s *subscriptionRegistry) ServiceRegistry(registry ServiceRegistry) {
-	s.registry = registry
-}
-
-func (s *subscriptionRegistry) eventHandler(name string, sub *api.Subscription, lb loadbalancer.LoadBalancer) func([]byte) {
+func (s *subscriptionRegistry) eventHandler(name string, sub *api.Subscription) func([]byte) {
 	return func(body []byte) {
 		services := s.registry.Lookup(name)
+		lb := s.factory.For(name)
 		service := lb.Next(services)
 
 		if service == nil {

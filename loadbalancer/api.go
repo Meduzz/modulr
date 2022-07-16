@@ -11,7 +11,7 @@ type (
 
 	// LoadBalancerFactory - provides a way to create loadbalancers
 	LoadBalancerFactory interface {
-		// Create - create a new loadbalancer
-		Create() LoadBalancer
+		// For - fetches the loadbalancer for the provided service name
+		For(string) LoadBalancer
 	}
 )

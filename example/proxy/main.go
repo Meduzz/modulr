@@ -22,10 +22,10 @@ func main() {
 	eventing := event.NewNatsAdapter(conn)
 	deliveryadapter := event.NewHttpDeliveryAdapter()
 
-	loadbalancer := registry.NewLoadBalancer(factory)
-	eventhandler := registry.NewEventRegistry(eventing, deliveryadapter, factory)
+	serviceRegistry := registry.NewServiceRegistry()
 
-	serviceRegistry := registry.NewServiceRegistry(loadbalancer, eventhandler)
+	loadbalancer := registry.NewHttpProxy(serviceRegistry, factory)
+	eventhandler := registry.NewEventProxy(serviceRegistry, eventing, deliveryadapter, factory)
 
 	// registers a service - naive version
 	srv.POST("/register", func(ctx *gin.Context) {

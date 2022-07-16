@@ -7,10 +7,12 @@ type (
 		index int
 	}
 
-	roundRobinFactory struct{}
+	roundRobinFactory struct {
+		lbs map[string]LoadBalancer
+	}
 )
 
-// NewRoundRobin - creates a new round robin load balancer
+// NewRoundRobin - creates a new in memory round robin load balancer
 func NewRoundRobin() LoadBalancer {
 	return &roundRobin{-1}
 }
@@ -30,9 +32,17 @@ func (r *roundRobin) Next(pool []api.Service) api.Service {
 }
 
 func NewRoundRobinFactory() LoadBalancerFactory {
-	return &roundRobinFactory{}
+	lbs := make(map[string]LoadBalancer)
+	return &roundRobinFactory{lbs}
 }
 
-func (f *roundRobinFactory) Create() LoadBalancer {
-	return NewRoundRobin()
+func (f *roundRobinFactory) For(name string) LoadBalancer {
+	lb, exists := f.lbs[name]
+
+	if !exists {
+		lb = NewRoundRobin()
+		f.lbs[name] = lb
+	}
+
+	return lb
 }
