@@ -2,8 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
-	"net/url"
 )
 
 type (
@@ -15,7 +13,6 @@ type (
 		GetPort() int
 		GetContext() string
 		GetSubscriptions() []*Subscription
-		ToURL() *url.URL
 	}
 
 	// DefaultService - implements a service
@@ -43,16 +40,6 @@ type (
 		Body    json.RawMessage `json:"body"`
 	}
 )
-
-func (s *DefaultService) ToURL() *url.URL {
-	// TODO only a matter of time until https
-	return &url.URL{
-		Scheme:  "http",
-		Host:    fmt.Sprintf("%s:%d", s.Address, s.Port),
-		Path:    s.Context,
-		RawPath: s.Context,
-	}
-}
 
 func (s *DefaultService) GetID() string {
 	return s.ID

@@ -1,4 +1,4 @@
-package registry
+package proxy
 
 import (
 	"fmt"
@@ -7,19 +7,19 @@ import (
 
 	"github.com/Meduzz/modulr/api"
 	"github.com/Meduzz/modulr/loadbalancer"
+	"github.com/gin-gonic/gin"
 	"github.com/vulcand/oxy/forward"
 )
 
 type (
 	// HttpProxy - interface for http loadbalancing
 	HttpProxy interface {
-		// Lookup - find service by name and return a http.HandlerFunc or nil
-		Lookup(string) http.HandlerFunc
+		// ForwarderFor - find service by name and return a gin.HandlerFunc or nil
+		ForwarderFor(api.Service) gin.HandlerFunc
 	}
 
 	httpproxy struct {
-		registry ServiceRegistry
-		factory  loadbalancer.LoadBalancerFactory
+		factory loadbalancer.LoadBalancerFactory
 	}
 
 	rewriter struct {
@@ -32,23 +32,13 @@ type (
 )
 
 // NewHttpProxy - creates a new http loadbalancer
-func NewHttpProxy(registry ServiceRegistry, factory loadbalancer.LoadBalancerFactory) HttpProxy {
+func NewHttpProxy(factory loadbalancer.LoadBalancerFactory) HttpProxy {
 	return &httpproxy{
-		factory:  factory,
-		registry: registry,
+		factory: factory,
 	}
 }
 
-func (p *httpproxy) Lookup(name string) http.HandlerFunc {
-	services := p.registry.Lookup(name)
-	lb := p.factory.For(name)
-
-	service := lb.Next(services)
-
-	if service == nil {
-		return nil
-	}
-
+func (p *httpproxy) ForwarderFor(service api.Service) gin.HandlerFunc {
 	// TODO errorhandling
 	// TODO circuitbreaker?
 	// TODO retries?
@@ -58,7 +48,7 @@ func (p *httpproxy) Lookup(name string) http.HandlerFunc {
 		return nil
 	}
 
-	return handler.ServeHTTP
+	return gin.WrapF(handler.ServeHTTP)
 }
 
 func chainedRewriters(rewriter forward.ReqRewriter) forward.ReqRewriter {

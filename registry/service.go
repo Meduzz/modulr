@@ -9,7 +9,7 @@ type (
 	ServiceRegistry interface {
 		// Register - register a service
 		Register(api.Service) error
-		// Deregister - remove a service by id
+		// Deregister - remove a service by name & id
 		Deregister(string, string) error
 		// Lookup - fetch services by name, never null
 		Lookup(string) []api.Service
@@ -22,9 +22,9 @@ type (
 	// Lifecycle - provides lifecycle methods for child modules.
 	Lifecycle interface {
 		// RegisterService - a new service was created in the registry
-		RegisterService(string, api.Service) error
+		RegisterService(api.Service) error
 		// DeregisterService - a service was completely removed from the registry
-		DeregisterService(string, api.Service) error
+		DeregisterService(api.Service) error
 		// RegisterInstance - one service instance was added to the registry
 		RegisterInstance(api.Service) error
 		// DeregisterInstance - one service instance was removed from the registry
@@ -37,7 +37,7 @@ type (
 	}
 )
 
-// NewServiceRegistry - creates a new service registry
+// NewServiceRegistry - creates a new in memory service registry
 func NewServiceRegistry() ServiceRegistry {
 	registry := &serviceRegistry{
 		services: make(map[string][]api.Service),
@@ -52,7 +52,7 @@ func (s *serviceRegistry) Register(service api.Service) error {
 
 	if !exists {
 		for _, child := range s.children {
-			child.RegisterService(service.GetName(), service)
+			child.RegisterService(service)
 		}
 
 		services = make([]api.Service, 0)
@@ -91,7 +91,7 @@ func (s *serviceRegistry) Deregister(name, id string) error {
 
 	if len(keepers) == 0 {
 		for _, child := range s.children {
-			child.DeregisterService(old.GetName(), old)
+			child.DeregisterService(old)
 		}
 
 		delete(s.services, name)

@@ -1,4 +1,4 @@
-package registry
+package event
 
 import (
 	"fmt"
@@ -6,51 +6,42 @@ import (
 
 	"github.com/Meduzz/modulr/api"
 	"github.com/Meduzz/modulr/errorz"
-	"github.com/Meduzz/modulr/event"
 	"github.com/Meduzz/modulr/loadbalancer"
+	"github.com/Meduzz/modulr/registry"
 )
 
 type (
-	// EventProxy - api to proxy events from and to http
-	EventProxy interface {
-		Lifecycle
-		// Publish - api to publish an event
-		Publish(*api.Event) error
-		// Request - api to rpc over event adapter
-		Request(*api.Event, string) ([]byte, error)
-	}
-
 	subscriptionRegistry struct {
-		adapter         event.EventAdapter
-		deliveryAdapter event.DeliveryAdapter
-		registry        ServiceRegistry
+		adapter         EventAdapter
+		deliveryAdapter DeliveryAdapter
+		register        registry.ServiceRegistry
 		factory         loadbalancer.LoadBalancerFactory
 	}
 )
 
-// NewEventProxy - creates a new EventRegistry with the provided adapter
-func NewEventProxy(registry ServiceRegistry,
-	eventAdapter event.EventAdapter,
-	deliveryAdapter event.DeliveryAdapter,
-	factory loadbalancer.LoadBalancerFactory) EventProxy {
+// NewEventSupport - creates a new EventSupport with the provided adapter
+func NewEventSupport(register registry.ServiceRegistry,
+	eventAdapter EventAdapter,
+	deliveryAdapter DeliveryAdapter,
+	factory loadbalancer.LoadBalancerFactory) registry.Lifecycle {
 
 	sub := &subscriptionRegistry{
 		adapter:         eventAdapter,
 		deliveryAdapter: deliveryAdapter,
 		factory:         factory,
-		registry:        registry,
+		register:        register,
 	}
 
-	registry.Plugin(sub)
+	register.Plugin(sub)
 
 	return sub
 }
 
-func (s *subscriptionRegistry) RegisterService(name string, service api.Service) error {
+func (s *subscriptionRegistry) RegisterService(service api.Service) error {
 	combined := errorz.NewError(nil)
 
 	for _, sub := range service.GetSubscriptions() {
-		err := s.adapter.Subscribe(sub.Topic, sub.Routing, sub.Group, s.eventHandler(name, sub))
+		err := s.adapter.Subscribe(sub.Topic, sub.Routing, sub.Group, s.eventHandler(service.GetName(), sub))
 
 		if err != nil {
 			combined.Append(err)
@@ -60,7 +51,7 @@ func (s *subscriptionRegistry) RegisterService(name string, service api.Service)
 	return combined.Error()
 }
 
-func (s *subscriptionRegistry) DeregisterService(name string, service api.Service) error {
+func (s *subscriptionRegistry) DeregisterService(service api.Service) error {
 	combined := errorz.NewError(nil)
 
 	for _, sub := range service.GetSubscriptions() {
@@ -82,17 +73,9 @@ func (s *subscriptionRegistry) DeregisterInstance(service api.Service) error {
 	return nil
 }
 
-func (s *subscriptionRegistry) Publish(event *api.Event) error {
-	return s.adapter.Publish(event.Topic, event.Routing, event.Body)
-}
-
-func (s *subscriptionRegistry) Request(event *api.Event, maxWait string) ([]byte, error) {
-	return s.adapter.Request(event.Topic, event.Routing, event.Body, maxWait)
-}
-
 func (s *subscriptionRegistry) eventHandler(name string, sub *api.Subscription) func([]byte) {
 	return func(body []byte) {
-		services := s.registry.Lookup(name)
+		services := s.register.Lookup(name)
 		lb := s.factory.For(name)
 		service := lb.Next(services)
 

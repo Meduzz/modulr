@@ -14,12 +14,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type greetingLog struct {
-	Name string `json:"name"`
-}
+type (
+	greetingLog struct {
+		Name string `json:"name"`
+	}
+
+	test struct {
+		*api.DefaultService
+		Type string `json:"type"`
+	}
+)
 
 func main() {
-	port := flag.Int("port", 8081, "set port to start on")
+	port := flag.Int("port", 8086, "set port to start on")
 	flag.Parse()
 
 	srv := gin.Default()
@@ -53,7 +60,7 @@ func register(port int) {
 		Path:  "/info",
 		Group: "service1",
 	})
-	service := api.DefaultService{
+	service := &api.DefaultService{
 		ID:            fmt.Sprintf("%d", port),
 		Name:          "service1",
 		Address:       "localhost",
@@ -61,7 +68,8 @@ func register(port int) {
 		Context:       "",
 		Subscriptions: subs,
 	}
-	req, _ := client.POST("http://localhost:8080/register", service)
+	test := &test{service, "test"}
+	req, _ := client.POST("http://localhost:8085/register", test)
 	req.Do(http.DefaultClient)
 }
 
@@ -71,7 +79,7 @@ func deregister(id int) {
 
 	<-c
 
-	req, _ := client.DELETE(fmt.Sprintf("http://localhost:8080/deregister/service1/%d", id), nil)
+	req, _ := client.DELETE(fmt.Sprintf("http://localhost:8085/deregister/service1/%d", id), nil)
 	req.Do(http.DefaultClient)
 
 	os.Exit(0)
@@ -89,6 +97,6 @@ func sendEvent(greeted string) {
 		Body:  json.RawMessage(bs),
 	}
 
-	req, _ := client.POST("http://localhost:8080/publish", ev)
+	req, _ := client.POST("http://localhost:8085/publish", ev)
 	req.Do(http.DefaultClient)
 }

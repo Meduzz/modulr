@@ -3,6 +3,7 @@ package modulr
 import (
 	"github.com/Meduzz/modulr/event"
 	"github.com/Meduzz/modulr/loadbalancer"
+	"github.com/Meduzz/modulr/proxy"
 	"github.com/Meduzz/modulr/registry"
 	"github.com/nats-io/nats.go"
 )
@@ -13,13 +14,13 @@ func NewInMemoryServiceRegistry() registry.ServiceRegistry {
 }
 
 // NewHttpProxy returns a new http proxy
-func NewHttpProxy(serviceRegistry registry.ServiceRegistry, factory loadbalancer.LoadBalancerFactory) registry.HttpProxy {
-	return registry.NewHttpProxy(serviceRegistry, factory)
+func NewHttpProxy(factory loadbalancer.LoadBalancerFactory) proxy.HttpProxy {
+	return proxy.NewHttpProxy(factory)
 }
 
-// NewEventProxy returns a new event proxy
-func NewEventProxy(serviceRegistry registry.ServiceRegistry, factory loadbalancer.LoadBalancerFactory, eventAdapter event.EventAdapter, deliveryAdapter event.DeliveryAdapter) registry.EventProxy {
-	return registry.NewEventProxy(serviceRegistry, eventAdapter, deliveryAdapter, factory)
+// NewEventSupport returns a new event support
+func NewEventSupport(registry registry.ServiceRegistry, factory loadbalancer.LoadBalancerFactory, eventAdapter event.EventAdapter, deliveryAdapter event.DeliveryAdapter) registry.Lifecycle {
+	return event.NewEventSupport(registry, eventAdapter, deliveryAdapter, factory)
 }
 
 // NewRoundRobinLoadBalancerFactory returns a new rr load balancer factory

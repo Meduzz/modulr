@@ -1,23 +1,19 @@
-package registry
+package event
 
 import (
-	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
 
 	"github.com/Meduzz/modulr/api"
 	"github.com/Meduzz/modulr/loadbalancer"
+	"github.com/Meduzz/modulr/registry"
 )
 
 var (
 	logg            = make(chan string, 100)
-	eventadapter    = &ea{nil}
-	deliveryadapter = &da{}
-	subscribe       = false
-	unsubscribe     = false
-	publish         = false
-	deliver         = false
+	eventadapter    = &ea{nil, true, true, true}
+	deliveryadapter = &da{true}
 	service         = &api.DefaultService{
 		ID:      "1",
 		Name:    "test",
@@ -33,33 +29,28 @@ var (
 			},
 		},
 	}
-	registry  = NewServiceRegistry()
-	subject   = NewEventProxy(registry, eventadapter, deliveryadapter, loadbalancer.NewRoundRobinFactory())
-	testEvent = &api.Event{
-		Topic:   "test",
-		Routing: "test",
-		Body:    json.RawMessage([]byte("test")),
-	}
+	register     = registry.NewServiceRegistry()
+	eventSupport = NewEventSupport(register, eventadapter, deliveryadapter, loadbalancer.NewRoundRobinFactory())
 )
 
 type (
 	ea struct {
-		handler func([]byte)
+		handler          func([]byte)
+		AllowSubscribe   bool
+		AllowUnsubscribe bool
+		AllowPublish     bool
 	}
 
 	da struct {
+		AllowDeliver bool
 	}
 )
-
-func TestMain(m *testing.M) {
-	registry.Register(service)
-}
 
 // all these tests depends on each other :-(
 
 func TestUnhappySubscribe(t *testing.T) {
-	subscribe = true
-	err := subject.RegisterService(service.GetName(), service)
+	eventadapter.AllowSubscribe = false
+	err := eventSupport.RegisterService(service)
 
 	if err == nil {
 		t.Error("expected an error")
@@ -73,11 +64,11 @@ func TestUnhappySubscribe(t *testing.T) {
 		t.Error("the log is not empty")
 	}
 
-	subscribe = false
+	eventadapter.AllowSubscribe = true
 }
 
 func TestHappySubscribe(t *testing.T) {
-	err := subject.RegisterService(service.GetName(), service)
+	err := eventSupport.RegisterService(service)
 
 	if err != nil {
 		t.Error(err)
@@ -93,67 +84,10 @@ func TestHappySubscribe(t *testing.T) {
 	}
 }
 
-func TestHappyPublishAndDelivery(t *testing.T) {
-	err := subject.Publish(testEvent)
-
-	if err != nil {
-		t.Error(err)
-	}
-
-	publish := <-logg
-	if publish != "test test test" {
-		t.Error("the published event did not match")
-	}
-
-	delivered := <-logg
-	if delivered != "http://localhost:1025/test/event test" {
-		t.Error("the delivered data did not match")
-	}
-
-	if len(logg) > 0 {
-		t.Error("the log is not empty")
-	}
-}
-
-func TestHappyPublishUnhappyDelivery(t *testing.T) {
-	deliver = true
-	err := subject.Publish(testEvent)
-
-	if err != nil {
-		t.Error(err)
-	}
-
-	publish := <-logg
-	if publish != "test test test" {
-		t.Error("the published event did not match")
-	}
-
-	if len(logg) > 0 {
-		t.Error("the log is not empty")
-	}
-}
-
-func TestUnhappyPublish(t *testing.T) {
-	publish = true
-	err := subject.Publish(testEvent)
-
-	if err == nil {
-		t.Error("expected an error")
-	}
-
-	if err.Error() != "publish" {
-		t.Errorf("got the wrong error, got: %s", err.Error())
-	}
-
-	if len(logg) > 0 {
-		t.Error("the log is not empty")
-	}
-}
-
 func TestUnhappyUnsubscribe(t *testing.T) {
-	unsubscribe = true
+	eventadapter.AllowUnsubscribe = false
 
-	err := subject.DeregisterService(service.GetName(), service)
+	err := eventSupport.DeregisterService(service)
 
 	if err == nil {
 		t.Error("expected an error")
@@ -167,7 +101,7 @@ func TestUnhappyUnsubscribe(t *testing.T) {
 		t.Error("log is not empty")
 	}
 
-	unsubscribe = false
+	eventadapter.AllowUnsubscribe = true
 }
 
 func TestHappyUnsubscribeUnhappySubscribe(t *testing.T) {
@@ -176,20 +110,25 @@ func TestHappyUnsubscribeUnhappySubscribe(t *testing.T) {
 	service2.ID = "2"
 	service2.Port = 1026
 
-	subject.RegisterService(service2.GetName(), service2)
+	eventadapter.AllowSubscribe = false
+	eventSupport.RegisterService(service2)
 
-	subscribe = true
-	err := subject.DeregisterService(service.GetName(), service)
+	err := eventSupport.DeregisterService(service)
 
 	if err != nil {
 		t.Error(err)
+	}
+
+	topic := <-logg
+	if topic != "test test test" {
+		t.Error("topic did not match")
 	}
 
 	if len(logg) > 0 {
 		t.Error("log is not empty")
 	}
 
-	subscribe = false
+	eventadapter.AllowSubscribe = true
 }
 
 func TestHappyUnsubscribeHappySubscribe(t *testing.T) {
@@ -198,13 +137,13 @@ func TestHappyUnsubscribeHappySubscribe(t *testing.T) {
 	service2.ID = "2"
 	service2.Port = 1026
 
-	err := subject.DeregisterService(service2.GetName(), service2)
+	err := eventSupport.DeregisterService(service2)
 
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = subject.DeregisterService(service.GetName(), service)
+	err = eventSupport.DeregisterService(service)
 
 	if err != nil {
 		t.Error(err)
@@ -225,42 +164,8 @@ func TestHappyUnsubscribeHappySubscribe(t *testing.T) {
 	}
 }
 
-func TestHappyRequest(t *testing.T) {
-	res, err := subject.Request(testEvent, "3s")
-
-	if err != nil {
-		t.Errorf("there was an error: %v", err)
-	}
-
-	if res == nil {
-		t.Error("there was no response")
-	}
-
-	if string(res) != string(testEvent.Body) {
-		t.Errorf("the response did not match, was: %s", string(res))
-	}
-}
-
-func TestUnhappyRequest(t *testing.T) {
-	publish = true
-	_, err := subject.Request(testEvent, "3s")
-
-	if err == nil {
-		t.Errorf("expected an error")
-	}
-	publish = true
-}
-
-func TestInvalidMaxWait(t *testing.T) {
-	_, err := subject.Request(testEvent, "asdf")
-
-	if err == nil {
-		t.Errorf("expected invalid duration to cause error")
-	}
-}
-
 func (e *ea) Subscribe(topic, routing, group string, handler func([]byte)) error {
-	if subscribe {
+	if !e.AllowSubscribe {
 		return fmt.Errorf("subscribe")
 	}
 
@@ -270,7 +175,7 @@ func (e *ea) Subscribe(topic, routing, group string, handler func([]byte)) error
 }
 
 func (e *ea) Unsubscribe(topic, routing, group string) error {
-	if unsubscribe {
+	if !e.AllowUnsubscribe {
 		return fmt.Errorf("unsubscribe")
 	}
 
@@ -280,7 +185,7 @@ func (e *ea) Unsubscribe(topic, routing, group string) error {
 }
 
 func (e *ea) Publish(topic, routing string, event []byte) error {
-	if publish {
+	if !e.AllowPublish {
 		return fmt.Errorf("publish")
 	}
 
@@ -300,7 +205,7 @@ func (e *ea) Request(topic, routing string, body []byte, maxWait string) ([]byte
 		return nil, err
 	}
 
-	if publish {
+	if !e.AllowPublish {
 		return nil, fmt.Errorf("publish")
 	}
 
@@ -308,7 +213,7 @@ func (e *ea) Request(topic, routing string, body []byte, maxWait string) ([]byte
 }
 
 func (d *da) DeliverEvent(url string, event []byte) error {
-	if deliver {
+	if !d.AllowDeliver {
 		return fmt.Errorf("deliver")
 	}
 
