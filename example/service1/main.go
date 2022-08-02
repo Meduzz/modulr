@@ -67,6 +67,7 @@ func register(port int) {
 		Port:          port,
 		Context:       "",
 		Subscriptions: subs,
+		Scheme:        "http",
 	}
 	test := &test{service, "test"}
 	req, _ := client.POST("http://localhost:8085/register", test)

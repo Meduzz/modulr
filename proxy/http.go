@@ -68,8 +68,7 @@ func (r *rewriter) Rewrite(req *http.Request) {
 	req.URL.RawPath = strings.Replace(req.URL.RawPath, fmt.Sprintf("/call/%s", r.service.GetName()), "", 1)
 	req.URL.Path = strings.Replace(req.URL.Path, fmt.Sprintf("/call/%s", r.service.GetName()), "", 1)
 	req.URL.Host = fmt.Sprintf("%s:%d", r.service.GetAddress(), r.service.GetPort())
-	// TODO assuming http
-	req.URL.Scheme = "http"
+	req.URL.Scheme = r.service.GetScheme()
 }
 
 // Chained request rewriter

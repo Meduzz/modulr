@@ -46,7 +46,11 @@ func main() {
 
 	// registers a service - naive version
 	srv.POST("/register", func(ctx *gin.Context) {
-		service := &test{}
+		service := &test{
+			DefaultService: &api.DefaultService{
+				Scheme: "http",
+			},
+		}
 		ctx.BindJSON(service)
 
 		err := serviceRegistry.Register(service)

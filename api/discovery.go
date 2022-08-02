@@ -13,6 +13,7 @@ type (
 		GetPort() int
 		GetContext() string
 		GetSubscriptions() []*Subscription
+		GetScheme() string
 	}
 
 	// DefaultService - implements a service
@@ -23,6 +24,7 @@ type (
 		Port          int             `json:"port"`                    // port 1024+
 		Context       string          `json:"context"`                 // used in routing
 		Subscriptions []*Subscription `json:"subscriptions,omitempty"` // event subscriptions
+		Scheme        string          `json:"scheme,omitempty"`        // optional scheme (if not http)
 	}
 
 	// Subscription - details needed for an event subscriptions
@@ -63,4 +65,8 @@ func (s *DefaultService) GetContext() string {
 
 func (s *DefaultService) GetSubscriptions() []*Subscription {
 	return s.Subscriptions
+}
+
+func (s *DefaultService) GetScheme() string {
+	return s.Scheme
 }
