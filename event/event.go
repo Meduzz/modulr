@@ -84,8 +84,7 @@ func (s *subscriptionRegistry) eventHandler(name string, sub *api.Subscription) 
 			return
 		}
 
-		// TODO assuming http
-		url := fmt.Sprintf("http://%s:%d%s%s", service.GetAddress(), service.GetPort(), service.GetContext(), sub.Path)
+		url := fmt.Sprintf("%s://%s:%d%s%s", service.GetScheme(), service.GetAddress(), service.GetPort(), service.GetContext(), sub.Path)
 		err := s.deliveryAdapter.DeliverEvent(url, body)
 
 		if err != nil {
