@@ -67,8 +67,13 @@ func chainedRewriters(rewriter forward.ReqRewriter) forward.ReqRewriter {
 func (r *rewriter) Rewrite(req *http.Request) {
 	req.URL.RawPath = strings.Replace(req.URL.RawPath, fmt.Sprintf("/call/%s", r.service.GetName()), r.service.GetContext(), 1)
 	req.URL.Path = strings.Replace(req.URL.Path, fmt.Sprintf("/call/%s", r.service.GetName()), r.service.GetContext(), 1)
-	req.URL.Host = fmt.Sprintf("%s:%d", r.service.GetAddress(), r.service.GetPort())
 	req.URL.Scheme = r.service.GetScheme()
+
+	if r.service.GetPort() != 0 {
+		req.URL.Host = fmt.Sprintf("%s:%d", r.service.GetAddress(), r.service.GetPort())
+	} else {
+		req.URL.Host = r.service.GetAddress()
+	}
 }
 
 // Chained request rewriter

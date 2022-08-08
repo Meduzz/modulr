@@ -81,10 +81,16 @@ func (s *subscriptionRegistry) eventHandler(name string, sub *api.Subscription) 
 
 		if service == nil {
 			log.Printf("Loadbalancer returned nil service (%s)\n", name)
+			// TODO safe to unsubscribe?
 			return
 		}
 
-		url := fmt.Sprintf("%s://%s:%d%s%s", service.GetScheme(), service.GetAddress(), service.GetPort(), service.GetContext(), sub.Path)
+		url := ""
+		if service.GetPort() != 0 {
+			url = fmt.Sprintf("%s://%s:%d%s%s", service.GetScheme(), service.GetAddress(), service.GetPort(), service.GetContext(), sub.Path)
+		} else {
+			url = fmt.Sprintf("%s://%s%s%s", service.GetScheme(), service.GetAddress(), service.GetContext(), sub.Path)
+		}
 		err := s.deliveryAdapter.DeliverEvent(url, body)
 
 		if err != nil {
