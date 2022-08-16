@@ -91,11 +91,14 @@ func (s *subscriptionRegistry) eventHandler(name string, sub *api.Subscription) 
 		} else {
 			url = fmt.Sprintf("%s://%s%s%s", service.GetScheme(), service.GetAddress(), service.GetContext(), sub.Path)
 		}
+
 		err := s.deliveryAdapter.DeliverEvent(url, body)
 
 		if err != nil {
 			// TODO do something smarter with errors
 			log.Printf("Delivering event to %s threw error: %v\n", url, err)
+		} else {
+			log.Printf("Delivering event to %s went well.", url)
 		}
 	}
 }

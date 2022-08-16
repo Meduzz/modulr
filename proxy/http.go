@@ -39,10 +39,9 @@ func NewHttpProxy(factory loadbalancer.LoadBalancerFactory) HttpProxy {
 }
 
 func (p *httpproxy) ForwarderFor(service api.Service) gin.HandlerFunc {
-	// TODO errorhandling
 	// TODO circuitbreaker?
 	// TODO retries?
-	handler, err := forward.New(forward.Rewriter(chainedRewriters(&rewriter{service})))
+	handler, err := forward.New(forward.Rewriter(chainedRewriters(&rewriter{service})), forward.PassHostHeader(true))
 
 	if err != nil {
 		return nil
