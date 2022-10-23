@@ -13,11 +13,15 @@ func NewHttpDeliveryAdapter() DeliveryAdapter {
 	return &httpAdapter{}
 }
 
-func (h *httpAdapter) DeliverEvent(url string, body []byte) error {
+func (h *httpAdapter) DeliverEvent(url, secret string, body []byte) error {
 	req, err := client.POSTBytes(url, body, "application/json")
 
 	if err != nil {
 		return err
+	}
+
+	if secret != "" {
+		req.Header("Authorization", secret)
 	}
 
 	res, err := req.Do(http.DefaultClient)

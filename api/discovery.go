@@ -29,10 +29,11 @@ type (
 
 	// Subscription - details needed for an event subscriptions
 	Subscription struct {
-		Topic   string `json:"topic"`   // topic/exchange
-		Routing string `json:"routing"` // routing key
-		Group   string `json:"group"`   // consumer group
-		Path    string `json:"path"`    // webhook path - service.context.
+		Topic   string `json:"topic"`             // topic/exchange
+		Routing string `json:"routing,omitempty"` // routing key
+		Group   string `json:"group"`             // consumer group
+		Path    string `json:"path"`              // webhook path - callbacks/my.event
+		Secret  string `json:"secret,omitempty"`  // webhook secret
 	}
 
 	// Event - request to publish an event on behalf of a service

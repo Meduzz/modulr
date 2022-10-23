@@ -92,7 +92,7 @@ func (s *subscriptionRegistry) eventHandler(name string, sub *api.Subscription) 
 			url = fmt.Sprintf("%s://%s%s%s", service.GetScheme(), service.GetAddress(), service.GetContext(), sub.Path)
 		}
 
-		err := s.deliveryAdapter.DeliverEvent(url, body)
+		err := s.deliveryAdapter.DeliverEvent(url, sub.Secret, body)
 
 		if err != nil {
 			// TODO do something smarter with errors

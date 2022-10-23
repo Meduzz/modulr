@@ -212,7 +212,7 @@ func (e *ea) Request(topic, routing string, body []byte, maxWait string) ([]byte
 	return body, nil
 }
 
-func (d *da) DeliverEvent(url string, event []byte) error {
+func (d *da) DeliverEvent(url, secret string, event []byte) error {
 	if !d.AllowDeliver {
 		return fmt.Errorf("deliver")
 	}

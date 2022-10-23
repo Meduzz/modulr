@@ -14,6 +14,6 @@ type (
 	}
 
 	DeliveryAdapter interface {
-		DeliverEvent(string, []byte) error
+		DeliverEvent(string, string, []byte) error
 	}
 )
