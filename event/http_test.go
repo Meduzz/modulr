@@ -23,7 +23,7 @@ func TestMain(m *testing.M) {
 		if protected {
 			token := ctx.GetHeader("Authorization")
 
-			if token == "" {
+			if token == "" || token != "top secret" {
 				ctx.AbortWithStatus(400)
 				return
 			}
@@ -89,6 +89,16 @@ func TestInvalidProtection(t *testing.T) {
 	expectedData = text
 	protected = true
 	err := subject.DeliverEvent("http://localhost:6060/webhook", "", []byte(text))
+
+	if err == nil {
+		t.Error("expected an error")
+	}
+
+	if err.Error() != "call did not return 200" {
+		t.Errorf("error message was not the expected one, was: %s", err.Error())
+	}
+
+	err = subject.DeliverEvent("http://localhost:6060/webhook", "asdf", []byte(text))
 
 	if err == nil {
 		t.Error("expected an error")
