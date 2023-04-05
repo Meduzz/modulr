@@ -8,9 +8,13 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
-// NewInMemoryServiceRegistry returns a new in memory service registry
-func NewInMemoryServiceRegistry() registry.ServiceRegistry {
+// NewServiceRegistry returns a new in memory service registry
+func NewServiceRegistry() registry.ServiceRegistry {
 	return registry.NewServiceRegistry()
+}
+
+func NewInMemoryRegistryStorage() registry.RegistryStorage {
+	return registry.NewInMemoryStorage()
 }
 
 // NewHttpProxy returns a new http proxy

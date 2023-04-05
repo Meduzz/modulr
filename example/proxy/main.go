@@ -12,14 +12,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type (
-	// Test extends the api.Service (As an example)
-	Test interface {
-		api.Service
-		GetType() string
-	}
-)
-
 func main() {
 	srv := gin.Default()
 
@@ -34,6 +26,8 @@ func main() {
 	deliveryadapter := event.NewHttpDeliverer()
 
 	serviceRegistry := registry.NewServiceRegistry()
+	inmemStorage := registry.NewInMemoryStorage()
+	serviceRegistry.SetStorage(inmemStorage)
 
 	httpProxy := proxy.NewProxy()
 	httpForwarder := proxy.NewHttpForwarder()
@@ -80,24 +74,22 @@ func main() {
 	srv.Any("/call/:service/*path", func(ctx *gin.Context) {
 		name := ctx.Param("service")
 
-		services := serviceRegistry.Lookup(name)
-		lb := factory.For(name)
-		service := lb.Next(services)
+		services, err := serviceRegistry.Lookup(name)
 
-		test, ok := service.(Test)
-
-		if !ok {
-			log.Println("could not cast service to Test")
-		} else {
-			log.Printf("calling %s of type %s\n", test.GetName(), test.GetType())
+		if err != nil {
+			ctx.AbortWithError(500, err)
+			return
 		}
 
-		handler := httpProxy.ForwarderFor(service)
-
-		if handler == nil {
+		if len(services) == 0 {
 			ctx.Status(404)
 			return
 		}
+
+		lb := factory.For(name)
+		service := lb.Next(services)
+
+		handler := httpProxy.ForwarderFor(service)
 
 		gin.WrapF(handler)(ctx)
 	})

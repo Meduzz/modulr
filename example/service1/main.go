@@ -18,11 +18,6 @@ type (
 	greetingLog struct {
 		Name string `json:"name"`
 	}
-
-	test struct {
-		*api.DefaultService
-		Type string `json:"type"`
-	}
 )
 
 func main() {
@@ -68,9 +63,9 @@ func register(port int) {
 		Context:       "",
 		Subscriptions: subs,
 		Scheme:        "http",
+		Type:          "http",
 	}
-	test := &test{service, "test"}
-	req, _ := client.POST("http://localhost:8085/register", test)
+	req, _ := client.POST("http://localhost:8085/register", service)
 	req.Do(http.DefaultClient)
 }
 

@@ -77,7 +77,13 @@ func (s *subscriptionRegistry) RegisterDeliverer(serviceType string, adapter Del
 
 func (s *subscriptionRegistry) eventHandler(name string, sub *api.Subscription) func([]byte) {
 	return func(body []byte) {
-		services := s.register.Lookup(name)
+		services, err := s.register.Lookup(name)
+
+		if err != nil {
+			// TODO do something smarter with errors
+			log.Printf("Looking up services for service %s threw error: %v\n", name, err)
+		}
+
 		lb := s.factory.For(name)
 		service := lb.Next(services)
 
@@ -87,7 +93,7 @@ func (s *subscriptionRegistry) eventHandler(name string, sub *api.Subscription) 
 			return
 		}
 
-		err := s.deliveryAdapters[service.GetType()].DeliverEvent(service, sub, body)
+		err = s.deliveryAdapters[service.GetType()].DeliverEvent(service, sub, body)
 
 		if err != nil {
 			// TODO do something smarter with errors
