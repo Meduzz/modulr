@@ -98,7 +98,7 @@ func (s *subscriptionRegistry) eventHandler(name string, sub *api.Subscription) 
 
 		if service == nil {
 			log.Printf("Loadbalancer returned nil service (%s)\n", name)
-			// TODO safe to unsubscribe?
+			s.adapter.Unsubscribe(sub.Topic, sub.Routing, sub.Group)
 			return
 		}
 

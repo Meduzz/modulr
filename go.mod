@@ -1,6 +1,6 @@
 module github.com/Meduzz/modulr
 
-go 1.19
+go 1.20
 
 require github.com/vulcand/oxy v1.4.2
 
