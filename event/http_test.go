@@ -10,7 +10,7 @@ import (
 var (
 	expectedData = ""
 	protected    = false
-	subject      = NewHttpDeliveryAdapter()
+	subject      = NewHttpDeliverer()
 	srv          = gin.Default()
 )
 
@@ -46,7 +46,7 @@ func TestMain(m *testing.M) {
 
 	go start()
 
-	eventSupport.RegisterDeliveryAdapter("http", deliveryadapter)
+	eventSupport.RegisterDeliverer("http", deliveryadapter)
 
 	os.Exit(m.Run())
 }

@@ -31,7 +31,7 @@ func main() {
 
 	factory := loadbalancer.NewRoundRobinFactory()
 	eventing := event.NewNatsAdapter(conn)
-	deliveryadapter := event.NewHttpDeliveryAdapter()
+	deliveryadapter := event.NewHttpDeliverer()
 
 	serviceRegistry := registry.NewServiceRegistry()
 
@@ -40,7 +40,7 @@ func main() {
 	httpProxy.RegisterForwarder("http", httpForwarder)
 
 	eventSupport := event.NewEventSupport(serviceRegistry, eventing, factory)
-	eventSupport.RegisterDeliveryAdapter("http", deliveryadapter)
+	eventSupport.RegisterDeliverer("http", deliveryadapter)
 
 	// registers a service - naive version
 	srv.POST("/register", func(ctx *gin.Context) {

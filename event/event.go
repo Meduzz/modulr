@@ -10,14 +10,9 @@ import (
 )
 
 type (
-	EventRegistry interface {
-		registry.Lifecycle
-		RegisterDeliveryAdapter(string, DeliveryAdapter)
-	}
-
 	subscriptionRegistry struct {
 		adapter          EventAdapter
-		deliveryAdapters map[string]DeliveryAdapter
+		deliveryAdapters map[string]Deliverer
 		register         registry.ServiceRegistry
 		factory          loadbalancer.LoadBalancerFactory
 	}
@@ -26,11 +21,11 @@ type (
 // NewEventSupport - creates a new EventSupport with the provided adapter
 func NewEventSupport(register registry.ServiceRegistry,
 	eventAdapter EventAdapter,
-	factory loadbalancer.LoadBalancerFactory) EventRegistry {
+	factory loadbalancer.LoadBalancerFactory) EventDelivery {
 
 	sub := &subscriptionRegistry{
 		adapter:          eventAdapter,
-		deliveryAdapters: make(map[string]DeliveryAdapter),
+		deliveryAdapters: make(map[string]Deliverer),
 		factory:          factory,
 		register:         register,
 	}
@@ -76,7 +71,7 @@ func (s *subscriptionRegistry) DeregisterInstance(service api.Service) error {
 	return nil
 }
 
-func (s *subscriptionRegistry) RegisterDeliveryAdapter(serviceType string, adapter DeliveryAdapter) {
+func (s *subscriptionRegistry) RegisterDeliverer(serviceType string, adapter Deliverer) {
 	s.deliveryAdapters[serviceType] = adapter
 }
 

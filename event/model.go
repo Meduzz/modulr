@@ -1,8 +1,17 @@
 package event
 
-import "github.com/Meduzz/modulr/api"
+import (
+	"github.com/Meduzz/modulr/api"
+	"github.com/Meduzz/modulr/registry"
+)
 
 type (
+	// EventDelivery - focuses on how to deliver events received
+	EventDelivery interface {
+		registry.Lifecycle
+		RegisterDeliverer(string, Deliverer)
+	}
+
 	// EventAdapter - interface to be implemented by event adapters
 	EventAdapter interface {
 		// Publish - publish a payload to a topic with optional routingkey
@@ -15,7 +24,8 @@ type (
 		Request(string, string, []byte, string) ([]byte, error)
 	}
 
-	DeliveryAdapter interface {
+	// Deliverer - focues on delivering individual events to a certain type of service
+	Deliverer interface {
 		// DeliverEvent is called when there's an event to deliver. Params are service, subscription & body.
 		DeliverEvent(api.Service, *api.Subscription, []byte) error
 	}

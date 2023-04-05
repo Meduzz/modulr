@@ -34,6 +34,6 @@ func NewNatsEventAdapter(conn *nats.Conn) event.EventAdapter {
 }
 
 // NewHttpDeliveryAdapter returns a new default delivery adapter
-func NewHttpDeliveryAdapter() event.DeliveryAdapter {
-	return event.NewHttpDeliveryAdapter()
+func NewHttpDeliveryAdapter() event.Deliverer {
+	return event.NewHttpDeliverer()
 }

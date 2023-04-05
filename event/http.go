@@ -10,7 +10,7 @@ import (
 
 type httpAdapter struct{}
 
-func NewHttpDeliveryAdapter() DeliveryAdapter {
+func NewHttpDeliverer() Deliverer {
 	return &httpAdapter{}
 }
 
