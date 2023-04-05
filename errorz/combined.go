@@ -2,7 +2,6 @@ package errorz
 
 import (
 	"errors"
-	"fmt"
 )
 
 // CombinedError - struct that combines a bunch of errors to one
@@ -38,14 +37,9 @@ func (e *CombinedError) Error() error {
 		return e.errors[0]
 	}
 
-	main := ""
-	for _, err := range e.errors {
-		main = fmt.Sprintf("%s\n%s", main, err.Error())
-	}
-
-	if main == "" {
+	if len(e.errors) == 0 {
 		return nil
 	}
 
-	return errors.New(main)
+	return errors.Join(e.errors...)
 }
