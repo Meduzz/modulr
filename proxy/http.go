@@ -6,21 +6,11 @@ import (
 	"strings"
 
 	"github.com/Meduzz/modulr/api"
-	"github.com/Meduzz/modulr/loadbalancer"
-	"github.com/gin-gonic/gin"
 	"github.com/vulcand/oxy/forward"
 )
 
 type (
-	// HttpProxy - interface for http loadbalancing
-	HttpProxy interface {
-		// ForwarderFor - find service by name and return a gin.HandlerFunc or nil
-		ForwarderFor(api.Service) gin.HandlerFunc
-	}
-
-	httpproxy struct {
-		factory loadbalancer.LoadBalancerFactory
-	}
+	httpproxy struct{}
 
 	rewriter struct {
 		service api.Service
@@ -31,14 +21,11 @@ type (
 	}
 )
 
-// NewHttpProxy - creates a new http loadbalancer
-func NewHttpProxy(factory loadbalancer.LoadBalancerFactory) HttpProxy {
-	return &httpproxy{
-		factory: factory,
-	}
+func NewHttpForwarder() Forwarder {
+	return &httpproxy{}
 }
 
-func (p *httpproxy) ForwarderFor(service api.Service) gin.HandlerFunc {
+func (h *httpproxy) Handler(service api.Service) http.HandlerFunc {
 	// TODO circuitbreaker?
 	// TODO retries?
 	handler, err := forward.New(forward.Rewriter(chainedRewriters(&rewriter{service})), forward.PassHostHeader(true))
@@ -47,7 +34,7 @@ func (p *httpproxy) ForwarderFor(service api.Service) gin.HandlerFunc {
 		return nil
 	}
 
-	return gin.WrapF(handler.ServeHTTP)
+	return handler.ServeHTTP
 }
 
 func chainedRewriters(rewriter forward.ReqRewriter) forward.ReqRewriter {

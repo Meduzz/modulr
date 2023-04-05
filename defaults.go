@@ -14,8 +14,8 @@ func NewInMemoryServiceRegistry() registry.ServiceRegistry {
 }
 
 // NewHttpProxy returns a new http proxy
-func NewHttpProxy(factory loadbalancer.LoadBalancerFactory) proxy.HttpProxy {
-	return proxy.NewHttpProxy(factory)
+func NewHttpProxy() proxy.Proxy {
+	return proxy.NewProxy()
 }
 
 // NewEventSupport returns a new event support

@@ -18,11 +18,6 @@ type (
 		api.Service
 		GetType() string
 	}
-
-	test struct {
-		*api.DefaultService
-		Type string `json:"type"`
-	}
 )
 
 func main() {
@@ -40,18 +35,19 @@ func main() {
 
 	serviceRegistry := registry.NewServiceRegistry()
 
-	loadbalancer := proxy.NewHttpProxy(factory)
+	httpProxy := proxy.NewProxy()
+	httpForwarder := proxy.NewHttpForwarder()
+	httpProxy.RegisterForwarder("http", httpForwarder)
 
 	eventSupport := event.NewEventSupport(serviceRegistry, eventing, factory)
 	eventSupport.RegisterDeliveryAdapter("http", deliveryadapter)
 
 	// registers a service - naive version
 	srv.POST("/register", func(ctx *gin.Context) {
-		service := &test{
-			DefaultService: &api.DefaultService{
-				Scheme: "http",
-			},
+		service := &api.DefaultService{
+			Scheme: "http",
 		}
+
 		ctx.BindJSON(service)
 
 		err := serviceRegistry.Register(service)
@@ -96,14 +92,14 @@ func main() {
 			log.Printf("calling %s of type %s\n", test.GetName(), test.GetType())
 		}
 
-		handler := loadbalancer.ForwarderFor(service)
+		handler := httpProxy.ForwarderFor(service)
 
 		if handler == nil {
 			ctx.Status(404)
 			return
 		}
 
-		handler(ctx)
+		gin.WrapF(handler)(ctx)
 	})
 
 	srv.POST("/publish", func(ctx *gin.Context) {
@@ -121,8 +117,4 @@ func main() {
 	})
 
 	srv.Run(":8085")
-}
-
-func (t *test) GetType() string {
-	return t.Type
 }
