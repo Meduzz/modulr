@@ -1,6 +1,9 @@
-package registry
+package inmemory
 
-import "github.com/Meduzz/modulr/api"
+import (
+	"github.com/Meduzz/modulr"
+	"github.com/Meduzz/modulr/api"
+)
 
 type (
 	inmemoryStorage struct {
@@ -8,8 +11,12 @@ type (
 	}
 )
 
+func init() {
+	modulr.ServiceRegistry.SetStorage(NewInMemoryStorage())
+}
+
 // NewInMemoryStorage - stores stuff in memory, do not use :)
-func NewInMemoryStorage() RegistryStorage {
+func NewInMemoryStorage() api.RegistryStorage {
 	svcs := make(map[string][]api.Service)
 	return &inmemoryStorage{svcs}
 }

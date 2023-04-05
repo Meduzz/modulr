@@ -1,10 +1,11 @@
-package proxy
+package http
 
 import (
 	"fmt"
 	"net/http"
 	"strings"
 
+	"github.com/Meduzz/modulr"
 	"github.com/Meduzz/modulr/api"
 	"github.com/vulcand/oxy/forward"
 )
@@ -21,7 +22,11 @@ type (
 	}
 )
 
-func NewHttpForwarder() Forwarder {
+func init() {
+	modulr.HttpProxy.RegisterForwarder("http", NewHttpForwarder())
+}
+
+func NewHttpForwarder() api.Forwarder {
 	return &httpproxy{}
 }
 

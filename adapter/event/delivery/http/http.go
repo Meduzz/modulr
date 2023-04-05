@@ -5,12 +5,17 @@ import (
 	"net/http"
 
 	"github.com/Meduzz/helper/http/client"
+	"github.com/Meduzz/modulr"
 	"github.com/Meduzz/modulr/api"
 )
 
 type httpAdapter struct{}
 
-func NewHttpDeliverer() EventDeliveryAdapter {
+func init() {
+	modulr.EventSupport.RegisterDeliverer("http", NewHttpDeliverer())
+}
+
+func NewHttpDeliverer() api.EventDeliveryAdapter {
 	return &httpAdapter{}
 }
 

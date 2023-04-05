@@ -4,15 +4,15 @@ import "github.com/Meduzz/modulr/api"
 
 type (
 	serviceRegistry struct {
-		children []Lifecycle
-		storage  RegistryStorage
+		children []api.Lifecycle
+		storage  api.RegistryStorage
 	}
 )
 
 // NewServiceRegistry - creates a new in memory service registry
-func NewServiceRegistry() ServiceRegistry {
+func NewServiceRegistry() api.ServiceRegistry {
 	registry := &serviceRegistry{
-		children: make([]Lifecycle, 0),
+		children: make([]api.Lifecycle, 0),
 	}
 
 	return registry
@@ -76,7 +76,7 @@ func (s *serviceRegistry) Lookup(name string) ([]api.Service, error) {
 	return s.storage.Lookup(name)
 }
 
-func (s *serviceRegistry) Plugin(lc Lifecycle) {
+func (s *serviceRegistry) Plugin(lc api.Lifecycle) {
 	s.children = append(s.children, lc)
 }
 
@@ -84,6 +84,6 @@ func (s *serviceRegistry) Start() error {
 	return s.storage.Start()
 }
 
-func (s *serviceRegistry) SetStorage(storage RegistryStorage) {
+func (s *serviceRegistry) SetStorage(storage api.RegistryStorage) {
 	s.storage = storage
 }

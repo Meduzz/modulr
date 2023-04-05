@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/Meduzz/modulr/api"
 	"github.com/gin-gonic/gin"
 )
 
@@ -12,6 +13,24 @@ var (
 	protected    = false
 	subject      = NewHttpDeliverer()
 	srv          = gin.Default()
+	service      = &api.DefaultService{
+		ID:      "1",
+		Name:    "test",
+		Address: "localhost",
+		Port:    6060,
+		Context: "",
+		Type:    "http",
+		Scheme:  "http",
+		Subscriptions: []*api.Subscription{
+			{
+				Topic:   "test",
+				Routing: "test",
+				Group:   "test",
+				Path:    "/webhook",
+				Secret:  "top secret",
+			},
+		},
+	}
 )
 
 func start() {
@@ -45,9 +64,6 @@ func TestMain(m *testing.M) {
 	})
 
 	go start()
-
-	eventSupport.RegisterDeliverer("http", deliveryadapter)
-	eventSupport.SetEventAdapter(eventadapter)
 
 	os.Exit(m.Run())
 }

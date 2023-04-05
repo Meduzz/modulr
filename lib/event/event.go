@@ -4,27 +4,22 @@ import (
 	"log"
 
 	"github.com/Meduzz/modulr/api"
-	"github.com/Meduzz/modulr/errorz"
-	"github.com/Meduzz/modulr/loadbalancer"
-	"github.com/Meduzz/modulr/registry"
+	"github.com/Meduzz/modulr/lib/errorz"
 )
 
 type (
 	subscriptionRegistry struct {
-		adapter          EventAdapter
-		deliveryAdapters map[string]EventDeliveryAdapter
-		register         registry.ServiceRegistry
-		factory          loadbalancer.LoadBalancerFactory
+		adapter          api.EventAdapter
+		deliveryAdapters map[string]api.EventDeliveryAdapter
+		register         api.ServiceRegistry
+		factory          api.LoadBalancerFactory
 	}
 )
 
 // NewEventSupport - creates a new EventSupport with the provided adapter
-func NewEventSupport(register registry.ServiceRegistry,
-	factory loadbalancer.LoadBalancerFactory) EventSupport {
-
+func NewEventSupport(register api.ServiceRegistry) api.EventSupport {
 	sub := &subscriptionRegistry{
-		deliveryAdapters: make(map[string]EventDeliveryAdapter),
-		factory:          factory,
+		deliveryAdapters: make(map[string]api.EventDeliveryAdapter),
 		register:         register,
 	}
 
@@ -69,12 +64,24 @@ func (s *subscriptionRegistry) DeregisterInstance(service api.Service) error {
 	return nil
 }
 
-func (s *subscriptionRegistry) RegisterDeliverer(serviceType string, adapter EventDeliveryAdapter) {
+func (s *subscriptionRegistry) RegisterDeliverer(serviceType string, adapter api.EventDeliveryAdapter) {
 	s.deliveryAdapters[serviceType] = adapter
 }
 
-func (s *subscriptionRegistry) SetEventAdapter(adapter EventAdapter) {
+func (s *subscriptionRegistry) SetEventAdapter(adapter api.EventAdapter) {
 	s.adapter = adapter
+}
+
+func (s *subscriptionRegistry) Publish(event *api.Event) error {
+	return s.adapter.Publish(event.Topic, event.Routing, event.Body)
+}
+
+func (s *subscriptionRegistry) Request(event *api.Event, maxWait string) ([]byte, error) {
+	return s.adapter.Request(event.Topic, event.Routing, event.Body, maxWait)
+}
+
+func (s *subscriptionRegistry) SetLoadBalancerFactory(factory api.LoadBalancerFactory) {
+	s.factory = factory
 }
 
 func (s *subscriptionRegistry) eventHandler(name string, sub *api.Subscription) func([]byte) {

@@ -2,12 +2,12 @@ package event
 
 import (
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/Meduzz/modulr/api"
-	"github.com/Meduzz/modulr/loadbalancer"
-	"github.com/Meduzz/modulr/registry"
+	"github.com/Meduzz/modulr/lib/registry"
 )
 
 var (
@@ -33,7 +33,7 @@ var (
 		},
 	}
 	register     = registry.NewServiceRegistry()
-	eventSupport = NewEventSupport(register, loadbalancer.NewRoundRobinFactory())
+	eventSupport = NewEventSupport(register)
 )
 
 type (
@@ -47,9 +47,21 @@ type (
 	da struct {
 		AllowDeliver bool
 	}
+
+	rf struct{}
+
+	rr struct{}
 )
 
-// all these tests depends on each other :-(
+// all these tests depends on each other :(
+
+func TestMain(m *testing.M) {
+	eventSupport.RegisterDeliverer("http", deliveryadapter)
+	eventSupport.SetEventAdapter(eventadapter)
+	eventSupport.SetLoadBalancerFactory(&rf{})
+
+	os.Exit(m.Run())
+}
 
 func TestUnhappySubscribe(t *testing.T) {
 	eventadapter.AllowSubscribe = false
@@ -222,4 +234,12 @@ func (d *da) Deliver(service api.Service, sub *api.Subscription, event []byte) e
 
 	logg <- fmt.Sprintf("%s %s", sub.Path, string(event))
 	return nil
+}
+
+func (r *rf) For(string) api.LoadBalancer {
+	return &rr{}
+}
+
+func (r *rr) Next(svcs []api.Service) api.Service {
+	return svcs[0]
 }

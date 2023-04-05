@@ -1,16 +1,18 @@
-package event
+package api
 
 import (
-	"github.com/Meduzz/modulr/api"
-	"github.com/Meduzz/modulr/registry"
+	"encoding/json"
 )
 
 type (
 	// EventSupport - focuses on how to deliver events received
 	EventSupport interface {
-		registry.Lifecycle
+		Lifecycle
+		Publish(*Event) error
+		Request(*Event, string) ([]byte, error)
 		RegisterDeliverer(string, EventDeliveryAdapter)
 		SetEventAdapter(EventAdapter)
+		SetLoadBalancerFactory(LoadBalancerFactory)
 	}
 
 	// EventAdapter - interface to be implemented by event adapters
@@ -28,6 +30,13 @@ type (
 	// EventDeliverer - focues on delivering individual events to a certain type of service
 	EventDeliveryAdapter interface {
 		// Deliver is called when there's an event to deliver. Params are service, subscription & body.
-		Deliver(api.Service, *api.Subscription, []byte) error
+		Deliver(Service, *Subscription, []byte) error
+	}
+
+	// Event - request to publish an event on behalf of a service
+	Event struct {
+		Topic   string          `json:"topic"`
+		Routing string          `json:"routing"`
+		Body    json.RawMessage `json:"body"`
 	}
 )

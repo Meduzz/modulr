@@ -3,39 +3,18 @@ package main
 import (
 	"log"
 
-	"github.com/Meduzz/helper/nuts"
+	"github.com/Meduzz/modulr"
+	_ "github.com/Meduzz/modulr/adapter/event/adapter/nats"
+	_ "github.com/Meduzz/modulr/adapter/event/delivery/http"
+	_ "github.com/Meduzz/modulr/adapter/loadbalancer/roundrobin"
+	_ "github.com/Meduzz/modulr/adapter/proxy/http"
+	_ "github.com/Meduzz/modulr/adapter/registry/inmemory"
 	"github.com/Meduzz/modulr/api"
-	"github.com/Meduzz/modulr/event"
-	"github.com/Meduzz/modulr/loadbalancer"
-	"github.com/Meduzz/modulr/proxy"
-	"github.com/Meduzz/modulr/registry"
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
 	srv := gin.Default()
-
-	conn, err := nuts.Connect()
-
-	if err != nil {
-		panic(err)
-	}
-
-	factory := loadbalancer.NewRoundRobinFactory()
-	eventing := event.NewNatsAdapter(conn)
-	deliveryadapter := event.NewHttpDeliverer()
-
-	serviceRegistry := registry.NewServiceRegistry()
-	inmemStorage := registry.NewInMemoryStorage()
-	serviceRegistry.SetStorage(inmemStorage)
-
-	httpProxy := proxy.NewProxy()
-	httpForwarder := proxy.NewHttpForwarder()
-	httpProxy.RegisterForwarder("http", httpForwarder)
-
-	eventSupport := event.NewEventSupport(serviceRegistry, factory)
-	eventSupport.RegisterDeliverer("http", deliveryadapter)
-	eventSupport.SetEventAdapter(eventing)
 
 	// registers a service - naive version
 	srv.POST("/register", func(ctx *gin.Context) {
@@ -45,7 +24,7 @@ func main() {
 
 		ctx.BindJSON(service)
 
-		err := serviceRegistry.Register(service)
+		err := modulr.ServiceRegistry.Register(service)
 
 		if err != nil {
 			ctx.AbortWithError(500, err)
@@ -62,7 +41,7 @@ func main() {
 		name := ctx.Param("name")
 		id := ctx.Param("id")
 
-		err := serviceRegistry.Deregister(name, id)
+		err := modulr.ServiceRegistry.Deregister(name, id)
 
 		if err != nil {
 			ctx.AbortWithError(500, err)
@@ -75,22 +54,12 @@ func main() {
 	srv.Any("/call/:service/*path", func(ctx *gin.Context) {
 		name := ctx.Param("service")
 
-		services, err := serviceRegistry.Lookup(name)
+		handler, err := modulr.HttpProxy.ForwarderFor(name)
 
 		if err != nil {
 			ctx.AbortWithError(500, err)
 			return
 		}
-
-		if len(services) == 0 {
-			ctx.Status(404)
-			return
-		}
-
-		lb := factory.For(name)
-		service := lb.Next(services)
-
-		handler := httpProxy.ForwarderFor(service)
 
 		gin.WrapF(handler)(ctx)
 	})
@@ -99,7 +68,7 @@ func main() {
 		event := &api.Event{}
 		ctx.BindJSON(event)
 
-		err := eventing.Publish(event.Topic, event.Routing, event.Body)
+		err := modulr.EventSupport.Publish(event)
 
 		if err != nil {
 			ctx.AbortWithError(500, err)

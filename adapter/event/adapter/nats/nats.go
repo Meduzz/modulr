@@ -1,9 +1,12 @@
-package event
+package nats
 
 import (
 	"fmt"
 	"time"
 
+	"github.com/Meduzz/helper/nuts"
+	"github.com/Meduzz/modulr"
+	"github.com/Meduzz/modulr/api"
 	"github.com/nats-io/nats.go"
 )
 
@@ -14,7 +17,17 @@ type (
 	}
 )
 
-func NewNatsAdapter(conn *nats.Conn) EventAdapter {
+func init() {
+	conn, err := nuts.Connect()
+
+	if err != nil {
+		panic(err)
+	}
+
+	modulr.EventSupport.SetEventAdapter(NewNatsAdapter(conn))
+}
+
+func NewNatsAdapter(conn *nats.Conn) api.EventAdapter {
 	subs := make(map[string]*nats.Subscription)
 
 	return &adapter{

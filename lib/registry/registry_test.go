@@ -30,7 +30,7 @@ func TestMain(m *testing.M) {
 	serviceName = make(chan string, 10)
 
 	subject = &serviceRegistry{
-		children: make([]Lifecycle, 0),
+		children: make([]api.Lifecycle, 0),
 	}
 
 	subject.Plugin(NewPlugin())
@@ -174,7 +174,7 @@ func TestRemoveSameTwice(t *testing.T) {
 }
 
 // let storage implement RegistryStorage
-func NewStorage() RegistryStorage {
+func NewStorage() api.RegistryStorage {
 	return &storage{make([]api.Service, 0)}
 }
 
@@ -226,7 +226,7 @@ func (s *storage) Start() error {
 }
 
 // let plugin implement Lifecycle
-func NewPlugin() Lifecycle {
+func NewPlugin() api.Lifecycle {
 	return &plugin{}
 }
 

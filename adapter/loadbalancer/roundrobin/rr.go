@@ -1,6 +1,9 @@
-package loadbalancer
+package roundrobin
 
-import "github.com/Meduzz/modulr/api"
+import (
+	"github.com/Meduzz/modulr"
+	"github.com/Meduzz/modulr/api"
+)
 
 type (
 	roundRobin struct {
@@ -8,12 +11,19 @@ type (
 	}
 
 	roundRobinFactory struct {
-		lbs map[string]LoadBalancer
+		lbs map[string]api.LoadBalancer
 	}
 )
 
+func init() {
+	rrf := NewRoundRobinFactory()
+
+	modulr.EventSupport.SetLoadBalancerFactory(rrf)
+	modulr.HttpProxy.SetLoadBalancerFactory(rrf)
+}
+
 // NewRoundRobin - creates a new in memory round robin load balancer
-func NewRoundRobin() LoadBalancer {
+func NewRoundRobin() api.LoadBalancer {
 	return &roundRobin{-1}
 }
 
@@ -31,12 +41,12 @@ func (r *roundRobin) Next(pool []api.Service) api.Service {
 	return pool[r.index]
 }
 
-func NewRoundRobinFactory() LoadBalancerFactory {
-	lbs := make(map[string]LoadBalancer)
+func NewRoundRobinFactory() api.LoadBalancerFactory {
+	lbs := make(map[string]api.LoadBalancer)
 	return &roundRobinFactory{lbs}
 }
 
-func (f *roundRobinFactory) For(name string) LoadBalancer {
+func (f *roundRobinFactory) For(name string) api.LoadBalancer {
 	lb, exists := f.lbs[name]
 
 	if !exists {

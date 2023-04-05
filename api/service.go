@@ -1,9 +1,5 @@
 package api
 
-import (
-	"encoding/json"
-)
-
 type (
 	// Service - the service details the lib need to do its job
 	Service interface {
@@ -36,13 +32,6 @@ type (
 		Group   string `json:"group"`             // consumer group
 		Path    string `json:"path"`              // webhook path - callbacks/my.event
 		Secret  string `json:"secret,omitempty"`  // webhook secret
-	}
-
-	// Event - request to publish an event on behalf of a service
-	Event struct {
-		Topic   string          `json:"topic"`
-		Routing string          `json:"routing"`
-		Body    json.RawMessage `json:"body"`
 	}
 )
 
