@@ -33,8 +33,9 @@ func main() {
 	httpForwarder := proxy.NewHttpForwarder()
 	httpProxy.RegisterForwarder("http", httpForwarder)
 
-	eventSupport := event.NewEventSupport(serviceRegistry, eventing, factory)
+	eventSupport := event.NewEventSupport(serviceRegistry, factory)
 	eventSupport.RegisterDeliverer("http", deliveryadapter)
+	eventSupport.SetEventAdapter(eventing)
 
 	// registers a service - naive version
 	srv.POST("/register", func(ctx *gin.Context) {

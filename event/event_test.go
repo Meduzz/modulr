@@ -33,7 +33,7 @@ var (
 		},
 	}
 	register     = registry.NewServiceRegistry()
-	eventSupport = NewEventSupport(register, eventadapter, loadbalancer.NewRoundRobinFactory())
+	eventSupport = NewEventSupport(register, loadbalancer.NewRoundRobinFactory())
 )
 
 type (
@@ -215,7 +215,7 @@ func (e *ea) Request(topic, routing string, body []byte, maxWait string) ([]byte
 	return body, nil
 }
 
-func (d *da) DeliverEvent(service api.Service, sub *api.Subscription, event []byte) error {
+func (d *da) Deliver(service api.Service, sub *api.Subscription, event []byte) error {
 	if !d.AllowDeliver {
 		return fmt.Errorf("deliver")
 	}

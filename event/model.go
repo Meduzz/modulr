@@ -6,10 +6,11 @@ import (
 )
 
 type (
-	// EventDelivery - focuses on how to deliver events received
-	EventDelivery interface {
+	// EventSupport - focuses on how to deliver events received
+	EventSupport interface {
 		registry.Lifecycle
-		RegisterDeliverer(string, Deliverer)
+		RegisterDeliverer(string, EventDeliveryAdapter)
+		SetEventAdapter(EventAdapter)
 	}
 
 	// EventAdapter - interface to be implemented by event adapters
@@ -24,9 +25,9 @@ type (
 		Request(string, string, []byte, string) ([]byte, error)
 	}
 
-	// Deliverer - focues on delivering individual events to a certain type of service
-	Deliverer interface {
-		// DeliverEvent is called when there's an event to deliver. Params are service, subscription & body.
-		DeliverEvent(api.Service, *api.Subscription, []byte) error
+	// EventDeliverer - focues on delivering individual events to a certain type of service
+	EventDeliveryAdapter interface {
+		// Deliver is called when there's an event to deliver. Params are service, subscription & body.
+		Deliver(api.Service, *api.Subscription, []byte) error
 	}
 )

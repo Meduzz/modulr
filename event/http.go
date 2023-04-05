@@ -10,11 +10,11 @@ import (
 
 type httpAdapter struct{}
 
-func NewHttpDeliverer() Deliverer {
+func NewHttpDeliverer() EventDeliveryAdapter {
 	return &httpAdapter{}
 }
 
-func (h *httpAdapter) DeliverEvent(service api.Service, sub *api.Subscription, body []byte) error {
+func (h *httpAdapter) Deliver(service api.Service, sub *api.Subscription, body []byte) error {
 	url := ""
 
 	if service.GetPort() != 0 {

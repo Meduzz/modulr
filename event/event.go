@@ -12,7 +12,7 @@ import (
 type (
 	subscriptionRegistry struct {
 		adapter          EventAdapter
-		deliveryAdapters map[string]Deliverer
+		deliveryAdapters map[string]EventDeliveryAdapter
 		register         registry.ServiceRegistry
 		factory          loadbalancer.LoadBalancerFactory
 	}
@@ -20,12 +20,10 @@ type (
 
 // NewEventSupport - creates a new EventSupport with the provided adapter
 func NewEventSupport(register registry.ServiceRegistry,
-	eventAdapter EventAdapter,
-	factory loadbalancer.LoadBalancerFactory) EventDelivery {
+	factory loadbalancer.LoadBalancerFactory) EventSupport {
 
 	sub := &subscriptionRegistry{
-		adapter:          eventAdapter,
-		deliveryAdapters: make(map[string]Deliverer),
+		deliveryAdapters: make(map[string]EventDeliveryAdapter),
 		factory:          factory,
 		register:         register,
 	}
@@ -71,8 +69,12 @@ func (s *subscriptionRegistry) DeregisterInstance(service api.Service) error {
 	return nil
 }
 
-func (s *subscriptionRegistry) RegisterDeliverer(serviceType string, adapter Deliverer) {
+func (s *subscriptionRegistry) RegisterDeliverer(serviceType string, adapter EventDeliveryAdapter) {
 	s.deliveryAdapters[serviceType] = adapter
+}
+
+func (s *subscriptionRegistry) SetEventAdapter(adapter EventAdapter) {
+	s.adapter = adapter
 }
 
 func (s *subscriptionRegistry) eventHandler(name string, sub *api.Subscription) func([]byte) {
@@ -93,7 +95,7 @@ func (s *subscriptionRegistry) eventHandler(name string, sub *api.Subscription) 
 			return
 		}
 
-		err = s.deliveryAdapters[service.GetType()].DeliverEvent(service, sub, body)
+		err = s.deliveryAdapters[service.GetType()].Deliver(service, sub, body)
 
 		if err != nil {
 			// TODO do something smarter with errors

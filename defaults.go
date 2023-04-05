@@ -23,8 +23,8 @@ func NewHttpProxy() proxy.Proxy {
 }
 
 // NewEventSupport returns a new event support
-func NewEventSupport(registry registry.ServiceRegistry, factory loadbalancer.LoadBalancerFactory, eventAdapter event.EventAdapter) registry.Lifecycle {
-	return event.NewEventSupport(registry, eventAdapter, factory)
+func NewEventSupport(registry registry.ServiceRegistry, factory loadbalancer.LoadBalancerFactory) event.EventSupport {
+	return event.NewEventSupport(registry, factory)
 }
 
 // NewRoundRobinLoadBalancerFactory returns a new rr load balancer factory
@@ -38,6 +38,6 @@ func NewNatsEventAdapter(conn *nats.Conn) event.EventAdapter {
 }
 
 // NewHttpDeliveryAdapter returns a new default delivery adapter
-func NewHttpDeliveryAdapter() event.Deliverer {
+func NewHttpEventDeliveryAdapter() event.EventDeliveryAdapter {
 	return event.NewHttpDeliverer()
 }

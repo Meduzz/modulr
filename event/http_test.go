@@ -47,6 +47,7 @@ func TestMain(m *testing.M) {
 	go start()
 
 	eventSupport.RegisterDeliverer("http", deliveryadapter)
+	eventSupport.SetEventAdapter(eventadapter)
 
 	os.Exit(m.Run())
 }
@@ -54,7 +55,7 @@ func TestMain(m *testing.M) {
 func TestHappyCase(t *testing.T) {
 	text := "so happy!"
 	expectedData = text
-	err := subject.DeliverEvent(service, service.GetSubscriptions()[0], []byte(text))
+	err := subject.Deliver(service, service.GetSubscriptions()[0], []byte(text))
 
 	if err != nil {
 		t.Error(err)
@@ -64,7 +65,7 @@ func TestHappyCase(t *testing.T) {
 func TestUnhappyCase(t *testing.T) {
 	text := "so unhapy!"
 	expectedData = "something different"
-	err := subject.DeliverEvent(service, service.GetSubscriptions()[0], []byte(text))
+	err := subject.Deliver(service, service.GetSubscriptions()[0], []byte(text))
 
 	if err == nil {
 		t.Errorf("expected an error")
@@ -79,7 +80,7 @@ func TestHappyProtectionOn(t *testing.T) {
 	text := "so happy!"
 	expectedData = text
 	protected = true
-	err := subject.DeliverEvent(service, service.GetSubscriptions()[0], []byte(text))
+	err := subject.Deliver(service, service.GetSubscriptions()[0], []byte(text))
 
 	if err != nil {
 		t.Error(err)
@@ -93,7 +94,7 @@ func TestInvalidProtection(t *testing.T) {
 	sub := service.GetSubscriptions()[0]
 	sub.Secret = "asdf"
 
-	err := subject.DeliverEvent(service, sub, []byte(text))
+	err := subject.Deliver(service, sub, []byte(text))
 
 	if err == nil {
 		t.Error("expected an error")
