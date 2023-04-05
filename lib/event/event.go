@@ -12,7 +12,7 @@ type (
 		adapter          api.EventAdapter
 		deliveryAdapters map[string]api.EventDeliveryAdapter
 		register         api.ServiceRegistry
-		factory          api.LoadBalancerFactory
+		lb               api.LoadBalancer
 	}
 )
 
@@ -80,8 +80,8 @@ func (s *subscriptionRegistry) Request(event *api.Event, maxWait string) ([]byte
 	return s.adapter.Request(event.Topic, event.Routing, event.Body, maxWait)
 }
 
-func (s *subscriptionRegistry) SetLoadBalancerFactory(factory api.LoadBalancerFactory) {
-	s.factory = factory
+func (s *subscriptionRegistry) SetLoadBalancer(lb api.LoadBalancer) {
+	s.lb = lb
 }
 
 func (s *subscriptionRegistry) eventHandler(name string, sub *api.Subscription) func([]byte) {
@@ -93,8 +93,7 @@ func (s *subscriptionRegistry) eventHandler(name string, sub *api.Subscription) 
 			log.Printf("Looking up services for service %s threw error: %v\n", name, err)
 		}
 
-		lb := s.factory.For(name)
-		service := lb.Next(services)
+		service := s.lb.Next(services)
 
 		if service == nil {
 			log.Printf("Loadbalancer returned nil service (%s)\n", name)

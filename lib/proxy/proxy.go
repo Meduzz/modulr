@@ -10,7 +10,7 @@ type (
 	proxy struct {
 		registry        map[string]api.Forwarder
 		serviceRegistry api.ServiceRegistry
-		factory         api.LoadBalancerFactory
+		lb              api.LoadBalancer
 	}
 )
 
@@ -25,7 +25,6 @@ func NewProxy(serviceRegistry api.ServiceRegistry) api.Proxy {
 }
 
 func (p *proxy) ForwarderFor(name string) (http.HandlerFunc, error) {
-	lb := p.factory.For(name)
 	services, err := p.serviceRegistry.Lookup(name)
 
 	if err != nil {
@@ -37,7 +36,7 @@ func (p *proxy) ForwarderFor(name string) (http.HandlerFunc, error) {
 		return http.NotFound, nil
 	}
 
-	service := lb.Next(services)
+	service := p.lb.Next(services)
 
 	forwarder, ok := p.registry[service.GetType()]
 
@@ -53,6 +52,6 @@ func (p *proxy) RegisterForwarder(typ string, forwarder api.Forwarder) {
 	p.registry[typ] = forwarder
 }
 
-func (p *proxy) SetLoadBalancerFactory(factory api.LoadBalancerFactory) {
-	p.factory = factory
+func (p *proxy) SetLoadBalancer(lb api.LoadBalancer) {
+	p.lb = lb
 }

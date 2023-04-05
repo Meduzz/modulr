@@ -12,7 +12,7 @@ type (
 		Request(*Event, string) ([]byte, error)
 		RegisterDeliverer(string, EventDeliveryAdapter)
 		SetEventAdapter(EventAdapter)
-		SetLoadBalancerFactory(LoadBalancerFactory)
+		SetLoadBalancer(LoadBalancer)
 	}
 
 	// EventAdapter - interface to be implemented by event adapters

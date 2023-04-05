@@ -48,8 +48,6 @@ type (
 		AllowDeliver bool
 	}
 
-	rf struct{}
-
 	rr struct{}
 )
 
@@ -58,7 +56,7 @@ type (
 func TestMain(m *testing.M) {
 	eventSupport.RegisterDeliverer("http", deliveryadapter)
 	eventSupport.SetEventAdapter(eventadapter)
-	eventSupport.SetLoadBalancerFactory(&rf{})
+	eventSupport.SetLoadBalancer(&rr{})
 
 	os.Exit(m.Run())
 }
@@ -234,10 +232,6 @@ func (d *da) Deliver(service api.Service, sub *api.Subscription, event []byte) e
 
 	logg <- fmt.Sprintf("%s %s", sub.Path, string(event))
 	return nil
-}
-
-func (r *rf) For(string) api.LoadBalancer {
-	return &rr{}
 }
 
 func (r *rr) Next(svcs []api.Service) api.Service {

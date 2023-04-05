@@ -7,52 +7,43 @@ import (
 
 type (
 	roundRobin struct {
-		index int
-	}
-
-	roundRobinFactory struct {
-		lbs map[string]api.LoadBalancer
+		index map[string]int
 	}
 )
 
 func init() {
-	rrf := NewRoundRobinFactory()
+	rr := NewRoundRobin()
 
-	modulr.EventSupport.SetLoadBalancerFactory(rrf)
-	modulr.HttpProxy.SetLoadBalancerFactory(rrf)
+	modulr.EventSupport.SetLoadBalancer(rr)
+	modulr.HttpProxy.SetLoadBalancer(rr)
 }
 
 // NewRoundRobin - creates a new in memory round robin load balancer
 func NewRoundRobin() api.LoadBalancer {
-	return &roundRobin{-1}
+	idx := make(map[string]int)
+	return &roundRobin{idx}
 }
 
 func (r *roundRobin) Next(pool []api.Service) api.Service {
-	r.index = r.index + 1
-
 	if len(pool) == 0 {
 		return nil
 	}
 
-	if r.index >= len(pool) {
-		r.index = 0
+	index, ok := r.index[pool[0].GetName()]
+
+	if !ok {
+		index = -1
 	}
 
-	return pool[r.index]
-}
+	index += 1
 
-func NewRoundRobinFactory() api.LoadBalancerFactory {
-	lbs := make(map[string]api.LoadBalancer)
-	return &roundRobinFactory{lbs}
-}
-
-func (f *roundRobinFactory) For(name string) api.LoadBalancer {
-	lb, exists := f.lbs[name]
-
-	if !exists {
-		lb = NewRoundRobin()
-		f.lbs[name] = lb
+	if index >= len(pool) {
+		index = 0
 	}
 
-	return lb
+	winner := pool[index]
+
+	r.index[winner.GetName()] = index
+
+	return winner
 }

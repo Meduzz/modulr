@@ -14,7 +14,7 @@ type (
 		RegisterForwarder(string, Forwarder)
 
 		// SetLoadbalancerFactory - allows us to register a loadbalancer factory
-		SetLoadBalancerFactory(LoadBalancerFactory)
+		SetLoadBalancer(LoadBalancer)
 	}
 
 	// Forwarder - interface defining the adapter that forwards the actual request and returns the actual response
