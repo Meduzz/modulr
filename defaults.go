@@ -19,8 +19,8 @@ func NewHttpProxy(factory loadbalancer.LoadBalancerFactory) proxy.HttpProxy {
 }
 
 // NewEventSupport returns a new event support
-func NewEventSupport(registry registry.ServiceRegistry, factory loadbalancer.LoadBalancerFactory, eventAdapter event.EventAdapter, deliveryAdapter event.DeliveryAdapter) registry.Lifecycle {
-	return event.NewEventSupport(registry, eventAdapter, deliveryAdapter, factory)
+func NewEventSupport(registry registry.ServiceRegistry, factory loadbalancer.LoadBalancerFactory, eventAdapter event.EventAdapter) registry.Lifecycle {
+	return event.NewEventSupport(registry, eventAdapter, factory)
 }
 
 // NewRoundRobinLoadBalancerFactory returns a new rr load balancer factory

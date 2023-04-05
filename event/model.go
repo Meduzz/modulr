@@ -1,5 +1,7 @@
 package event
 
+import "github.com/Meduzz/modulr/api"
+
 type (
 	// EventAdapter - interface to be implemented by event adapters
 	EventAdapter interface {
@@ -14,6 +16,7 @@ type (
 	}
 
 	DeliveryAdapter interface {
-		DeliverEvent(string, string, []byte) error
+		// DeliverEvent is called when there's an event to deliver. Params are service, subscription & body.
+		DeliverEvent(api.Service, *api.Subscription, []byte) error
 	}
 )

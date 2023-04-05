@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Meduzz/helper/http/client"
+	"github.com/Meduzz/modulr/api"
 )
 
 type httpAdapter struct{}
@@ -13,15 +14,23 @@ func NewHttpDeliveryAdapter() DeliveryAdapter {
 	return &httpAdapter{}
 }
 
-func (h *httpAdapter) DeliverEvent(url, secret string, body []byte) error {
+func (h *httpAdapter) DeliverEvent(service api.Service, sub *api.Subscription, body []byte) error {
+	url := ""
+
+	if service.GetPort() != 0 {
+		url = fmt.Sprintf("%s://%s:%d%s%s", service.GetScheme(), service.GetAddress(), service.GetPort(), service.GetContext(), sub.Path)
+	} else {
+		url = fmt.Sprintf("%s://%s%s%s", service.GetScheme(), service.GetAddress(), service.GetContext(), sub.Path)
+	}
+
 	req, err := client.POSTBytes(url, body, "application/json")
 
 	if err != nil {
 		return err
 	}
 
-	if secret != "" {
-		req.Header("Authorization", secret)
+	if sub.Secret != "" {
+		req.Header("Authorization", sub.Secret)
 	}
 
 	res, err := req.Do(http.DefaultClient)

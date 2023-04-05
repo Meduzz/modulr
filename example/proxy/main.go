@@ -42,7 +42,8 @@ func main() {
 
 	loadbalancer := proxy.NewHttpProxy(factory)
 
-	event.NewEventSupport(serviceRegistry, eventing, deliveryadapter, factory)
+	eventSupport := event.NewEventSupport(serviceRegistry, eventing, factory)
+	eventSupport.RegisterDeliveryAdapter("http", deliveryadapter)
 
 	// registers a service - naive version
 	srv.POST("/register", func(ctx *gin.Context) {

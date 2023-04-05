@@ -46,13 +46,15 @@ func TestMain(m *testing.M) {
 
 	go start()
 
+	eventSupport.RegisterDeliveryAdapter("http", deliveryadapter)
+
 	os.Exit(m.Run())
 }
 
 func TestHappyCase(t *testing.T) {
 	text := "so happy!"
 	expectedData = text
-	err := subject.DeliverEvent("http://localhost:6060/webhook", "", []byte(text))
+	err := subject.DeliverEvent(service, service.GetSubscriptions()[0], []byte(text))
 
 	if err != nil {
 		t.Error(err)
@@ -62,7 +64,7 @@ func TestHappyCase(t *testing.T) {
 func TestUnhappyCase(t *testing.T) {
 	text := "so unhapy!"
 	expectedData = "something different"
-	err := subject.DeliverEvent("http://localhost:6060/webhook", "", []byte(text))
+	err := subject.DeliverEvent(service, service.GetSubscriptions()[0], []byte(text))
 
 	if err == nil {
 		t.Errorf("expected an error")
@@ -77,7 +79,7 @@ func TestHappyProtectionOn(t *testing.T) {
 	text := "so happy!"
 	expectedData = text
 	protected = true
-	err := subject.DeliverEvent("http://localhost:6060/webhook", "top secret", []byte(text))
+	err := subject.DeliverEvent(service, service.GetSubscriptions()[0], []byte(text))
 
 	if err != nil {
 		t.Error(err)
@@ -88,7 +90,10 @@ func TestInvalidProtection(t *testing.T) {
 	text := "so happy!"
 	expectedData = text
 	protected = true
-	err := subject.DeliverEvent("http://localhost:6060/webhook", "", []byte(text))
+	sub := service.GetSubscriptions()[0]
+	sub.Secret = "asdf"
+
+	err := subject.DeliverEvent(service, sub, []byte(text))
 
 	if err == nil {
 		t.Error("expected an error")
@@ -98,13 +103,5 @@ func TestInvalidProtection(t *testing.T) {
 		t.Errorf("error message was not the expected one, was: %s", err.Error())
 	}
 
-	err = subject.DeliverEvent("http://localhost:6060/webhook", "asdf", []byte(text))
-
-	if err == nil {
-		t.Error("expected an error")
-	}
-
-	if err.Error() != "call did not return 200" {
-		t.Errorf("error message was not the expected one, was: %s", err.Error())
-	}
+	sub.Secret = "top secret"
 }

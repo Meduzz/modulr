@@ -1,7 +1,6 @@
 package event
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/Meduzz/modulr/api"
@@ -11,25 +10,29 @@ import (
 )
 
 type (
+	EventRegistry interface {
+		registry.Lifecycle
+		RegisterDeliveryAdapter(string, DeliveryAdapter)
+	}
+
 	subscriptionRegistry struct {
-		adapter         EventAdapter
-		deliveryAdapter DeliveryAdapter
-		register        registry.ServiceRegistry
-		factory         loadbalancer.LoadBalancerFactory
+		adapter          EventAdapter
+		deliveryAdapters map[string]DeliveryAdapter
+		register         registry.ServiceRegistry
+		factory          loadbalancer.LoadBalancerFactory
 	}
 )
 
 // NewEventSupport - creates a new EventSupport with the provided adapter
 func NewEventSupport(register registry.ServiceRegistry,
 	eventAdapter EventAdapter,
-	deliveryAdapter DeliveryAdapter,
-	factory loadbalancer.LoadBalancerFactory) registry.Lifecycle {
+	factory loadbalancer.LoadBalancerFactory) EventRegistry {
 
 	sub := &subscriptionRegistry{
-		adapter:         eventAdapter,
-		deliveryAdapter: deliveryAdapter,
-		factory:         factory,
-		register:        register,
+		adapter:          eventAdapter,
+		deliveryAdapters: make(map[string]DeliveryAdapter),
+		factory:          factory,
+		register:         register,
 	}
 
 	register.Plugin(sub)
@@ -73,6 +76,10 @@ func (s *subscriptionRegistry) DeregisterInstance(service api.Service) error {
 	return nil
 }
 
+func (s *subscriptionRegistry) RegisterDeliveryAdapter(serviceType string, adapter DeliveryAdapter) {
+	s.deliveryAdapters[serviceType] = adapter
+}
+
 func (s *subscriptionRegistry) eventHandler(name string, sub *api.Subscription) func([]byte) {
 	return func(body []byte) {
 		services := s.register.Lookup(name)
@@ -85,20 +92,13 @@ func (s *subscriptionRegistry) eventHandler(name string, sub *api.Subscription) 
 			return
 		}
 
-		url := ""
-		if service.GetPort() != 0 {
-			url = fmt.Sprintf("%s://%s:%d%s%s", service.GetScheme(), service.GetAddress(), service.GetPort(), service.GetContext(), sub.Path)
-		} else {
-			url = fmt.Sprintf("%s://%s%s%s", service.GetScheme(), service.GetAddress(), service.GetContext(), sub.Path)
-		}
-
-		err := s.deliveryAdapter.DeliverEvent(url, sub.Secret, body)
+		err := s.deliveryAdapters[service.GetType()].DeliverEvent(service, sub, body)
 
 		if err != nil {
 			// TODO do something smarter with errors
-			log.Printf("Delivering event to %s threw error: %v\n", url, err)
+			log.Printf("Delivering event to %s threw error: %v\n", sub.Path, err)
 		} else {
-			log.Printf("Delivering event to %s went well.", url)
+			log.Printf("Delivering event to %s went well.", sub.Path)
 		}
 	}
 }

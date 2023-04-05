@@ -18,19 +18,22 @@ var (
 		ID:      "1",
 		Name:    "test",
 		Address: "localhost",
-		Port:    1025,
-		Context: "/test",
+		Port:    6060,
+		Context: "",
+		Type:    "http",
+		Scheme:  "http",
 		Subscriptions: []*api.Subscription{
 			{
 				Topic:   "test",
 				Routing: "test",
 				Group:   "test",
-				Path:    "/event",
+				Path:    "/webhook",
+				Secret:  "top secret",
 			},
 		},
 	}
 	register     = registry.NewServiceRegistry()
-	eventSupport = NewEventSupport(register, eventadapter, deliveryadapter, loadbalancer.NewRoundRobinFactory())
+	eventSupport = NewEventSupport(register, eventadapter, loadbalancer.NewRoundRobinFactory())
 )
 
 type (
@@ -212,11 +215,11 @@ func (e *ea) Request(topic, routing string, body []byte, maxWait string) ([]byte
 	return body, nil
 }
 
-func (d *da) DeliverEvent(url, secret string, event []byte) error {
+func (d *da) DeliverEvent(service api.Service, sub *api.Subscription, event []byte) error {
 	if !d.AllowDeliver {
 		return fmt.Errorf("deliver")
 	}
 
-	logg <- fmt.Sprintf("%s %s", url, string(event))
+	logg <- fmt.Sprintf("%s %s", sub.Path, string(event))
 	return nil
 }

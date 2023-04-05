@@ -14,6 +14,7 @@ type (
 		GetContext() string
 		GetSubscriptions() []*Subscription
 		GetScheme() string
+		GetType() string
 	}
 
 	// DefaultService - implements a service
@@ -25,6 +26,7 @@ type (
 		Context       string          `json:"context"`                 // used in routing
 		Subscriptions []*Subscription `json:"subscriptions,omitempty"` // event subscriptions
 		Scheme        string          `json:"scheme,omitempty"`        // optional scheme (if not http)
+		Type          string          `json:"type"`                    // service type, as a way to decide how to deliver the payload
 	}
 
 	// Subscription - details needed for an event subscriptions
@@ -70,4 +72,8 @@ func (s *DefaultService) GetSubscriptions() []*Subscription {
 
 func (s *DefaultService) GetScheme() string {
 	return s.Scheme
+}
+
+func (s *DefaultService) GetType() string {
+	return s.Type
 }
