@@ -37,7 +37,7 @@ type (
 		Remove(string, string) (Service, error)
 		// Lookup - fetch all instance of service by its name
 		Lookup(string) ([]Service, error)
-		// Start - tell the storage to cold start
-		Start() error
+		// Start - tell the storage to cold start and return all service names it has stored
+		Start() ([]string, error)
 	}
 )

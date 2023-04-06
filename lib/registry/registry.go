@@ -81,7 +81,33 @@ func (s *serviceRegistry) Plugin(lc api.Lifecycle) {
 }
 
 func (s *serviceRegistry) Start() error {
-	return s.storage.Start()
+	services, err := s.storage.Start()
+
+	if err != nil {
+		return err
+	}
+
+	for _, it := range services {
+		svcs, err := s.Lookup(it)
+
+		if err != nil {
+			return err
+		}
+
+		first := true
+		for _, svc := range svcs {
+			for _, child := range s.children {
+				if first {
+					child.RegisterService(svc)
+					first = false
+				}
+
+				child.RegisterInstance(svc)
+			}
+		}
+	}
+
+	return nil
 }
 
 func (s *serviceRegistry) SetStorage(storage api.RegistryStorage) {

@@ -76,6 +76,6 @@ func (i *inmemoryStorage) Lookup(name string) ([]api.Service, error) {
 }
 
 // Start - tell the storage to cold start
-func (i *inmemoryStorage) Start() error {
-	return nil
+func (i *inmemoryStorage) Start() ([]string, error) {
+	return nil, nil
 }

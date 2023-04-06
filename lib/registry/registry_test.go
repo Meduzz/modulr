@@ -217,12 +217,12 @@ func (s *storage) Lookup(name string) ([]api.Service, error) {
 	return s.svcs, nil
 }
 
-func (s *storage) Start() error {
+func (s *storage) Start() ([]string, error) {
 	if storageError {
-		return fmt.Errorf("im an error")
+		return nil, fmt.Errorf("im an error")
 	}
 
-	return nil
+	return nil, nil
 }
 
 // let plugin implement Lifecycle
