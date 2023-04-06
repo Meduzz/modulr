@@ -7,6 +7,7 @@ import (
 
 	"github.com/Meduzz/modulr"
 	"github.com/Meduzz/modulr/api"
+	"github.com/gin-gonic/gin"
 	"github.com/vulcand/oxy/forward"
 )
 
@@ -30,7 +31,7 @@ func NewHttpForwarder() api.Forwarder {
 	return &httpproxy{}
 }
 
-func (h *httpproxy) Handler(service api.Service) http.HandlerFunc {
+func (h *httpproxy) Handler(service api.Service) gin.HandlerFunc {
 	// TODO circuitbreaker?
 	// TODO retries?
 	handler, err := forward.New(forward.Rewriter(chainedRewriters(&rewriter{service})), forward.PassHostHeader(true))
@@ -39,7 +40,7 @@ func (h *httpproxy) Handler(service api.Service) http.HandlerFunc {
 		return nil
 	}
 
-	return handler.ServeHTTP
+	return gin.WrapF(handler.ServeHTTP)
 }
 
 func chainedRewriters(rewriter forward.ReqRewriter) forward.ReqRewriter {

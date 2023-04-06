@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/Meduzz/modulr/api"
+	"github.com/gin-gonic/gin"
 )
 
 type (
@@ -24,7 +25,7 @@ func NewProxy(serviceRegistry api.ServiceRegistry) api.Proxy {
 	}
 }
 
-func (p *proxy) ForwarderFor(name string) (http.HandlerFunc, error) {
+func (p *proxy) ForwarderFor(name string) (gin.HandlerFunc, error) {
 	services, err := p.serviceRegistry.Lookup(name)
 
 	if err != nil {
@@ -33,7 +34,7 @@ func (p *proxy) ForwarderFor(name string) (http.HandlerFunc, error) {
 
 	if len(services) == 0 {
 		// TODO also write a pesky log about it?
-		return http.NotFound, nil
+		return gin.WrapF(http.NotFound), nil
 	}
 
 	service := p.lb.Next(services)
@@ -42,7 +43,7 @@ func (p *proxy) ForwarderFor(name string) (http.HandlerFunc, error) {
 
 	if !ok {
 		// TODO also write a pesky log about it?
-		return http.NotFound, nil
+		return gin.WrapF(http.NotFound), nil
 	}
 
 	return forwarder.Handler(service), nil

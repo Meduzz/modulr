@@ -61,7 +61,7 @@ func main() {
 			return
 		}
 
-		gin.WrapF(handler)(ctx)
+		handler(ctx)
 	})
 
 	srv.POST("/publish", func(ctx *gin.Context) {

@@ -1,14 +1,14 @@
 package api
 
 import (
-	"net/http"
+	"github.com/gin-gonic/gin"
 )
 
 type (
 	// Proxy - interface to forward http requests
 	Proxy interface {
 		// ForwarderFor - looks through internal registry for Forwarders matching the provided service
-		ForwarderFor(string) (http.HandlerFunc, error)
+		ForwarderFor(string) (gin.HandlerFunc, error)
 
 		// RegisterForwarder - allows us ot register forwarders for service types
 		RegisterForwarder(string, Forwarder)
@@ -19,6 +19,6 @@ type (
 
 	// Forwarder - interface defining the adapter that forwards the actual request and returns the actual response
 	Forwarder interface {
-		Handler(Service) http.HandlerFunc
+		Handler(Service) gin.HandlerFunc
 	}
 )
