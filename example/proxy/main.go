@@ -41,7 +41,7 @@ func main() {
 		name := ctx.Param("name")
 		id := ctx.Param("id")
 
-		err := modulr.ServiceRegistry.Deregister(name, id)
+		_, err := modulr.ServiceRegistry.Deregister(name, id)
 
 		if err != nil {
 			ctx.AbortWithError(500, err)

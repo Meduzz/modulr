@@ -85,19 +85,23 @@ func TestHappyPath(t *testing.T) {
 		t.Errorf("expected number of registered services to be 2 but was %d", len(svcs))
 	}
 
-	err = subject.Deregister(service1.GetName(), service1.GetID())
+	sv1, err := subject.Deregister(service1.GetName(), service1.GetID())
 
 	if err != nil {
 		t.Errorf("There was an unexpected error: %v", err)
 	}
 
 	<-serviceName
+
+	if service1 != sv1 {
+		t.Errorf("Expected service1 to be removed but service #%s was instead", sv1.GetID())
+	}
 
 	if len(serviceName) > 0 {
 		t.Error("there were too many calls to the plugin")
 	}
 
-	err = subject.Deregister(service2.GetName(), service2.GetID())
+	sv2, err := subject.Deregister(service2.GetName(), service2.GetID())
 
 	if err != nil {
 		t.Errorf("There was an unexpected error: %v", err)
@@ -105,6 +109,10 @@ func TestHappyPath(t *testing.T) {
 
 	<-serviceName
 	<-serviceName
+
+	if sv2 != service2 {
+		t.Errorf("Expected service2 to be removed but was service #%s", sv2.GetID())
+	}
 
 	if len(serviceName) > 0 {
 		t.Error("there were too many calls to the plugin")
@@ -149,7 +157,7 @@ func TestAddSameTwice(t *testing.T) {
 }
 
 func TestRemoveSameTwice(t *testing.T) {
-	err := subject.Deregister(service1.GetName(), service1.GetID())
+	_, err := subject.Deregister(service1.GetName(), service1.GetID())
 
 	if err != nil {
 		t.Errorf("There was an unexpected error: %v", err)
@@ -162,7 +170,7 @@ func TestRemoveSameTwice(t *testing.T) {
 		t.Error("there were too many calls to the plugin")
 	}
 
-	err = subject.Deregister(service1.GetName(), service1.GetID())
+	_, err = subject.Deregister(service1.GetName(), service1.GetID())
 
 	if err != nil {
 		t.Errorf("There was an unexpected error: %v", err)

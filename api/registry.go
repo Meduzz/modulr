@@ -6,7 +6,7 @@ type (
 		// Register - register a service
 		Register(Service) error
 		// Deregister - remove a service by name & id
-		Deregister(string, string) error
+		Deregister(string, string) (Service, error)
 		// Lookup - fetch services by name, never null
 		Lookup(string) ([]Service, error)
 		// Plugin - register a lifecycle plugin

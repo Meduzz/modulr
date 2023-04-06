@@ -44,11 +44,11 @@ func (s *serviceRegistry) Register(service api.Service) error {
 	return nil
 }
 
-func (s *serviceRegistry) Deregister(name, id string) error {
+func (s *serviceRegistry) Deregister(name, id string) (api.Service, error) {
 	svc, err := s.storage.Remove(name, id)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if svc != nil {
@@ -59,7 +59,7 @@ func (s *serviceRegistry) Deregister(name, id string) error {
 		existing, err := s.storage.Lookup(name)
 
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		if len(existing) == 0 {
@@ -69,7 +69,7 @@ func (s *serviceRegistry) Deregister(name, id string) error {
 		}
 	}
 
-	return nil
+	return svc, nil
 }
 
 func (s *serviceRegistry) Lookup(name string) ([]api.Service, error) {
