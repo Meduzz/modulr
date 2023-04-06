@@ -11,11 +11,13 @@ type (
 	}
 )
 
-func init() {
-	rr := NewRoundRobin()
+var LoadBalancer api.LoadBalancer
 
-	modulr.EventSupport.SetLoadBalancer(rr)
-	modulr.HttpProxy.SetLoadBalancer(rr)
+func init() {
+	LoadBalancer := NewRoundRobin()
+
+	modulr.EventSupport.SetLoadBalancer(LoadBalancer)
+	modulr.HttpProxy.SetLoadBalancer(LoadBalancer)
 }
 
 // NewRoundRobin - creates a new in memory round robin load balancer

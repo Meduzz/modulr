@@ -17,6 +17,8 @@ type (
 	}
 )
 
+var EventAdapter api.EventAdapter
+
 func init() {
 	conn, err := nuts.Connect()
 
@@ -24,7 +26,9 @@ func init() {
 		panic(err)
 	}
 
-	modulr.EventSupport.SetEventAdapter(NewNatsAdapter(conn))
+	EventAdapter = NewNatsAdapter(conn)
+
+	modulr.EventSupport.SetEventAdapter(EventAdapter)
 }
 
 func NewNatsAdapter(conn *nats.Conn) api.EventAdapter {
