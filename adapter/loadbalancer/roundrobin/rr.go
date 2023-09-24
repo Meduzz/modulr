@@ -1,13 +1,15 @@
 package roundrobin
 
 import (
+	"sync/atomic"
+
 	"github.com/Meduzz/modulr"
 	"github.com/Meduzz/modulr/api"
 )
 
 type (
 	roundRobin struct {
-		index map[string]int
+		index map[string]*atomic.Int32
 	}
 )
 
@@ -22,7 +24,7 @@ func init() {
 
 // NewRoundRobin - creates a new in memory round robin load balancer
 func NewRoundRobin() api.LoadBalancer {
-	idx := make(map[string]int)
+	idx := make(map[string]*atomic.Int32)
 	return &roundRobin{idx}
 }
 
@@ -34,18 +36,16 @@ func (r *roundRobin) Next(pool []api.Service) api.Service {
 	index, ok := r.index[pool[0].GetName()]
 
 	if !ok {
-		index = -1
+		index.Store(-1)
 	}
 
-	index += 1
+	index.Add(1)
 
-	if index >= len(pool) {
-		index = 0
+	if int(index.Load()) >= len(pool) {
+		index.Store(0)
 	}
 
-	winner := pool[index]
-
-	r.index[winner.GetName()] = index
+	winner := pool[index.Load()]
 
 	return winner
 }
